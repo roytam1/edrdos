@@ -1288,6 +1288,8 @@ if JOIN
 endif
 	cmp	es:LDT_BLK[bx],0FFFFh	; did we have a media change ?
 	 jne	select_logical_drv20	; then we'd better rebuild
+	cmp	es:LDT_BLK+2[bx],0FFFFh
+	 jne	select_logical_drv20
 select_logical_drv10:
 	call	rebuild_ldt_root	;  the LDT_ root block
 select_logical_drv20:

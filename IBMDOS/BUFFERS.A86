@@ -388,9 +388,9 @@ getblk20:
 alloc_cluster:
 ;-------------
 ; On Entry:
-;	AX = previous cluster (hint for desired start)
+;	DX:AX = previous cluster (hint for desired start)
 ; On Exit:
-;	AX = start of chain
+;	DX:AX = start of chain
 ;	CY set on failure
 ;
 	mov	cx,1
@@ -441,30 +441,22 @@ alloc_chain10:
 alloc_chain15:
 	mov	ah,SSTOR_SPACE		; does Superstore have room for data?
 	callf	ss:fdos_stub		; call stub routine
-;	test	cx,cx			; are we out of space ?
-	cmp	es:word ptr DDSC_BFREE+2[bx],0	; are we out of space ?
+	test	cx,cx			; are we out of space ?
 	 jnz	alloc_chain40		; no, go ahead and allocate the chain
-	cmp	es:word ptr DDSC_BFREE[bx],0
-	 jnz	alloc_chain40
-;	mov	es:DDSC_FREE[bx],cx	; SSTOR says there's none, lets agree
-	mov	es:word ptr DDSC_BFREE[bx],0	; SSTOR says there's none, lets agree
-	mov	es:word ptr DDSC_BFREE+2[bx],0
-	mov	es:DDSC_FREE[bx],0	; lets play it safe and update this as well
+	mov	es:DDSC_FREE[bx],cx	; SSTOR says there's none, lets agree
+	mov	es:word ptr DDSC_BFREE[bx],cx	; SSTOR says there's none, lets agree
+	mov	es:word ptr DDSC_BFREE+2[bx],cx
 	call	update_fat		; flush FAT to bring SSTOR up to date
 	jmps	alloc_chain10		; go round again and ask DELWATCH to
 					;  free up some more space
 					; we loop until either SSTOR says OK
 					;  or DELWATCH frees all it can
 alloc_chain20:
+	mov	cx,es:DDSC_FREE[bx]
 	mov	ah,DELW_FREECLU		; ask DELWATCH to purge a file
 	callf	ss:fdos_stub		; call stub routine
-;	cmp	cx,es:DDSC_FREE[bx]	; can DELWATCH free up any space ?
-	mov	cx,alloc_chain_cl+2
-	cmp	cx,es:word ptr DDSC_BFREE+2[bx]	; can DELWATCH free up any space ?
+	cmp	cx,es:DDSC_FREE[bx]	; can DELWATCH free up any space ?
 	 jne	alloc_chain10		; yes, go and try again
-	mov	cx,alloc_chain_cl
-	cmp	cx,es:word ptr DDSC_BFREE[bx]
-	 jne	alloc_chain10
 alloc_chain30:
 	pop	ax			; failure, restore stack
 	pop	dx
@@ -607,10 +599,9 @@ alloc_cl35:
 	 jnz	alloc_cl20
 	push	ds
 	lds	bx,ss:current_ddsc
-;	mov	ds:DDSC_FREE[bx],ax	; we definitely have none left
+	mov	ds:DDSC_FREE[bx],ax	; we definitely have none left
 	mov	ds:word ptr DDSC_BFREE[bx],ax	; we definitely have none left
 	mov	ds:word ptr DDSC_BFREE+2[bx],dx
-	mov	ds:DDSC_FREE[bx],ax	; better safe than sorry...
 	pop	ds
 	ret				; return (0);
 

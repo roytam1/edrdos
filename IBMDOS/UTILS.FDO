@@ -398,6 +398,8 @@ else
 endif
 	cmp	ax,es:LDT_BLK[bx]	; do we need to do a rebuild
 	 jne	path_prep_curdir20	;  or can we trust the media ?
+	cmp	ax,es:LDT_BLK+2[bx]
+	 jne	path_prep_curdir20
 path_prep_curdir10:
 	call	rebuild_ldt_curdir	; better reselect current dir
 path_prep_curdir20:
@@ -480,8 +482,15 @@ endif
 	 jz	path_prep_exit		; stop if we can't
 	call	open_dir		; move into the directory
 	 jc	path_prep_error		; stop if we can't
-	mov	cx,DBLOCK1[bx]		; are we destined for the root ?
-	 jcxz	path_prep_root		; yes, stop - we won't find anything
+;	mov	cx,DBLOCK1[bx]		; are we destined for the root ?
+	cmp	word ptr DBLOCK1[bx],0	; are we destined for the root ?
+	 jne	path_prep_done10	; no, proceed
+	cmp	dosfat,FAT32		; FAT32 file system?
+;	 jcxz	path_prep_root		; yes, stop - we won't find anything
+	 jne	path_prep_root		; no, stop - we won't find anything
+	cmp	DBLOCK1H[bx],0		; else also check high word of cluster
+	 je	path_prep_root
+path_prep_done10:
 	push	fdos_hds_root+2
 	push	fdos_hds_root
 	mov	fdos_hds_root,0		; don't stop at virtual root
@@ -750,35 +759,44 @@ eject
 
 mkdir_init:
 ;----------
+	push	dx
 	push	ax			; Init 1st block of the directory
-	xor	dx,dx
 	call	zeroblk			; zero the block
-	pop ax ! push ax		; get the block number
+;	pop ax ! push ax		; get the block number
+	pop ax ! pop dx			; get the block number
+	push	dx
+	push	ax
 	xor	bx,bx			; seek to beginning of cluster
-	xor	dx,dx
 	call	fill_dirbuf		; DI -> directory entry
-	pop dx ! push dx		; get our own block #
-	mov	ax,' .'			; this is the "." directory
+;	pop dx ! push dx		; get our own block #
+	pop ax ! pop dx			; get our own block #
+	push	dx
+	push	ax
+;	mov	ax,' .'			; this is the "." directory
+	mov	cx,' .'			; this is the "." directory
 	call	init_dot		; set name, attrib, time, date, block1
 	call	flush_dirbuf		; copy '.' entry to sector buffer
 	pop	ax			; get the block number
+	pop	dx
 	mov	bx,1			; do 2nd entry
-	xor	dx,dx
 	call	fill_dirbuf		; DI -> directory entry
 	call	hdsblk
-	xchg	ax,dx			; DX = parent directory
-	mov	ax,'..'			; this is the ".." directory
+;	xchg	ax,dx			; DX = parent directory
+;	mov	ax,'..'			; this is the ".." directory
+	mov	cx,'..'			; this is the ".." directory
 ;	call	init_dot		; fall into INIT_DOT
 ;	ret
 
 init_dot:
 	mov	dirp,di			; save directory entry for SETPCD
 	push	di
-	mov	DBLOCK1[di],dx		; our own block #
+;	mov	DBLOCK1[di],dx		; our own block #
+	mov	DBLOCK1[di],ax		; our own block #
 	cmp	dosfat,FAT32		; 32-bit file system?
-	 jne	init_dos10		; no, do not use high cluster entry
-	mov	DBLOCK1H[di],0
-init_dos10:
+	 jne	init_dot10		; no, do not use high cluster entry
+	mov	DBLOCK1H[di],dx
+init_dot10:
+	xchg	ax,cx
 	stosw				; store "." or ".."
 	mov	al,' '
 	mov	cx,11-2
@@ -867,6 +885,13 @@ chkcds:		; check if any process uses directory to delete
 ;
 	mov	bx,dirp
 	mov	cx,DBLOCK1[bx]		; block number of directory to delete
+	mov	chkcds_cl,cx
+	xor	cx,cx
+	cmp	dosfat,FAT32		; id this a FAT32 file system?
+	 jne	chkcds05		; no, proceed
+	mov	cx,DBLOCK1H[bx]		; else load high word of cluster, too
+chkcds05:
+	mov	chkcds_cl+2,cx
 	mov	dl,physical_drv		; get the drive the subdir is in
 	mov	al,-1			; start with drive A:
 chkcds10:
@@ -879,6 +904,8 @@ chkcds10:
 	cmp	dl,es:LDT_DRV[bx]	; does the drive match?
 	 jne	chkcds10		; no, don't bother then
 	cmp	es:LDT_BLK[bx],0ffffh	; is it valid
+	 jne    chkcds19
+	cmp	es:LDT_BLK+2[bx],0ffffh
 	 jne    chkcds19
 	push	ax
 	push	cx
@@ -893,11 +920,20 @@ if 0
 ; This didn't make the beta, so leave until the next release
 ; We really need to make sure we relog all SUBST's drives before
 ; we can be sure this is valid and fail the rmdir
+	mov	cx,chkcds_cl
 	cmp	cx,es:LDT_ROOT[bx]	; is this our root block ?
+	 jne	chkcds19a
+	mov	cx,chkcds_cl+2
+	cmp	cx,es:LDT_ROOT+2[bx]
 	 je	chkcds20		; (ie. a SUBST'd drive)
+chkcds19a:
 endif
+	mov	cx,chkcds_cl
 	cmp	cx,es:LDT_BLK[bx]	; does the block match
 	 jne	chkcds10		; no, try next drive
+	mov	cx,chkcds_cl+2
+	cmp	cx,es:LDT_BLK+2[bx]
+	 jne	chkcds10
 chkcds20:
 	ret
 
@@ -1763,8 +1799,9 @@ select_handle:		; select directory of current handle
 	call	select_physical_drv	; select the drive
 	pop bx ! pop es
 	mov	ax,es:DHNDL_DBLK[bx]
+	mov	dx,es:DHNDL_DBLK+2[bx]
 	mov	fdos_hds_blk,ax		; copy HDS_BLK
-	mov	fdos_hds_blk+2,0
+	mov	fdos_hds_blk+2,dx
 	clc				; handle is OK file
 vfy_hnd9:
 	ret				; good handle

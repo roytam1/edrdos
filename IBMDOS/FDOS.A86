@@ -218,6 +218,7 @@ BDOS_DATA	dseg	word
 	extrn	dosfat:word
 
 chdir_cl	dw	0,0
+chkcds_cl	dw	0,0
 
 NO_CRIT_ERRORS	equ	0100$0000b	; critical error shouldn't be generated
 					; warning - must match PCMODE.EQU

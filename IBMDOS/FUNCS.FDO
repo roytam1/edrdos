@@ -268,18 +268,21 @@ fdos_mkdir:
 
 	call	stamp_dir_entry		; set time and date in FCB
 	xor	ax,ax
+	xor	dx,dx
 	call	alloc_cluster		; Allocate a block
 	 jc	mkdir_err		; Report Error(no room on disk)
 	mov	si,dirp
 	mov	DBLOCK1[si],ax		; Initialize 1st block of fcb
 	cmp	dosfat,FAT32		; 32-bit file system?
 	 jne	fdos_mkdir10		; no, then do not use high word of cluster
-	mov	DBLOCK1H[si],0
+	mov	DBLOCK1H[si],dx
 fdos_mkdir10:
+	push	dx
 	push	ax			; save block
 	call	update_fat		; Write the fat to disk
 	call	update_dir		; Write the directory to disk
 	pop	ax			; now initialise the sub-directory
+	pop	dx
 	call	mkdir_init		;  '.' and '..' entries
 	call	update_dir		; update directory entry
 	mov	ax,5			; return a magic value for some
@@ -578,6 +581,10 @@ endif
 	mov	bx,dirp
 	mov	ax,DBLOCK1[bx]		; release all blocks of the file
 	xor	dx,dx
+	cmp	dosfat,FAT32		; is this a FAT32 file system?
+	 jne	creat10			; no, proceed
+	mov	dx,DBLOCK1H[bx]		; yes, then we need the high word of the first cluster, too
+creat10:
 	call	delfat			; so it is truncated to zero size
 	call	update_fat		; update file allocation table
 	jmps	creat2			; reinitialize directory entry
@@ -1751,11 +1758,19 @@ file_update:
 	xchg	ax,di			; DI -> directory entry in buffer
 	or	DATTS[di],DA_ARCHIVE	; mark file as modified
 ;;;	call	timestamp_dhndl		; record the current time
-	mov	ax,es:DHNDL_BLK1[bx]	; AX = 1st block in file
+	cmp	dosfat,FAT32		; is this a FAT32 file system?
+	 jne	file_update05		; no, then skip this entry
+	mov	ax,es:DHNDL_BLK1+2[bx]	; get high word of 1st block in file
+	push	di
+	lea	di,DBLOCK1H[di]
+	stosw				; and store it in the dir entry
+	pop	di
+file_update05:
+	mov	ax,es:DHNDL_BLK1[bx]	; 1st block in file
 	lea	di,DTIME[di]		; DI -> [time,date,block1,size]
 	push es ! push bx
 	push	ds
-    lea si,DHNDL_TIME[bx]
+	lea si,DHNDL_TIME[bx]
 	push ds ! push es
 	pop ds ! pop es			; swap ES and DS
 	movsw ! movsw			; copy time then date

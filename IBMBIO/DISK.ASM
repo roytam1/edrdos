@@ -2694,6 +2694,8 @@ login_primary:
 	 jnz	login_p0		; yes, then proceed normally
 	cmp	byte ptr [si+4],FAT16X_ID	; LBA partition?
 	 je	login_p9		; ignore this if LBA support not present
+	cmp	byte ptr [si+4],FAT32X_ID	; LBA partition?
+	 je	login_p9		; ignore this if LBA support not present
 	mov	ax,word ptr partend+2	; partition within CHS bounds?
 	cmp	ax,word ptr partend_max+2
 	 ja	login_p9		; cannot access via CHS, ignoring it
@@ -2731,6 +2733,8 @@ login_p9:
 log_p0:
 	call	new_unit		; ES:DI -> new UDSC
 	cmp	byte ptr [si+4],FAT16X_ID	; LBA partition?
+	 je	log_p0a			; yes, then always use LBA
+	cmp	byte ptr [si+4],FAT32X_ID	; LBA partition?
 	 je	log_p0a			; yes, then always use LBA
 	mov	ax,word ptr partend+2	; test if beyond CHS barrier
 	cmp	ax,word ptr partend_max+2
