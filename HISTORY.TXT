@@ -18,6 +18,25 @@
 - fixed bug in SynchroniseBuffers routine that sometimes caused data
   inconsistensies between buffers and disk
 
+- restructured DR-DOS DDSC to make it more compatible with DOS 7 Extended DPB
+  structure
+- implemented function 7302h (Get Extended DPB)
+- added alternate implementation of the int 25h/26h absolute disk read/write
+  interface via function 7305h, for the few silly programs that try to use the
+  so-called "extended" interface without checking if it is present
+- changed the behaviour of functions 1Fh and 32h (Get DPB) to return error code
+  FFh (invalid drive) for FAT32 drives; again, this was needed because some
+  programs rely on this function to identify FAT32 drives
+- fixed bug in disk device driver that had been introduced in WIP (2.2.2004)
+  that would sometimes cause random lock-ups or crashes
+- changed OEM version code in function 30h from 00h (PC DOS) to EEH (DR DOS),
+  changed true version as reported by function 3306h to 7.01, let SetVer
+  override this as well to make Scandisk activate its FAT32 functionality
+- added drive locking/unlocking functions to the disk device driver that fake
+  a successful operation to make Scandisk work again after version change
+- reduced maximum cluster size reported by function 36h for FAT32 partitions to
+  32K to improve compatibility with existing disk tools.
+
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device
   driver

@@ -2019,10 +2019,12 @@ bpb2ddsc41:
 	mov	es:word ptr DDSC_FSROOT[di],ax
 	lodsw				; get high word
 	mov	es:word ptr DDSC_FSROOT+2[di],ax
-	lodsw				; get sector number of file system info block
+	lodsw				; get sector number of file system info sector
 	mov	es:DDSC_FSINFO[di],ax
+	lodsw				; get sector number of backup boot sector
+	mov	es:DDSC_BOOTBAK[di],ax
 
-	mov	es:DDSC_DIRADDR[di],0	; no special root dir area for FAT32
+	mov	es:DDSC_DIRADDR[di],0ffffh	; special case for FAT32
 	push	es:word ptr DDSC_BFATRECS+2[di]	; multiply sectors per FAT
 	push	es:word ptr DDSC_BFATRECS[di]
 	mov	ax,0			; with number of FATs
@@ -2042,10 +2044,10 @@ bpb2ddsc41:
 	 je	bpb2ddsc42		; yes, then leave it
 	mov	es:word ptr DDSC_DATADDR[di],0	; else mark this entry as invalid
 bpb2ddsc42:
-	mov	ax,-18[si]		; get low word of size
-	mov	dx,-16[si]		; get high word of size
-	sub	ax,es:DDSC_BDATADDR[di]	; subtract non-data portion
-	sbb	dx,es:DDSC_BDATADDR+2[di]
+	mov	ax,-20[si]		; get low word of size
+	mov	dx,-18[si]		; get high word of size
+	sub	ax,es:word ptr DDSC_BDATADDR[di]	; subtract non-data portion
+	sbb	dx,es:word ptr DDSC_BDATADDR+2[di]
 	xor	cx,cx
 	mov	cl,es:DDSC_CLSHF[di]	; cluster shift value
 	test	cl,cl			; cluster size one?
@@ -2058,6 +2060,7 @@ bpb2ddsc44:
 	mov	es:word ptr DDSC_BCLSTRS[di],ax
 	mov	es:word ptr DDSC_BCLSTRS+2[di],dx
 	xor	ax,ax
+	mov	es:DDSC_NCLSTRS[di],0
 	mov	es:word ptr DDSC_BBLOCK[di],ax	; next block = 0
 	mov	es:word ptr DDSC_BBLOCK+2[di],ax
 	dec	ax

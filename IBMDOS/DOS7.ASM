@@ -6,20 +6,87 @@
 
 	include	pcmode.equ
 	include	fdos.equ
+	include	fdos.def
 	include	dos7.equ
 
 PCM_CODE	cseg	byte
 
 	extrn	get_path_drive:near
 	extrn	fdos_diskinfo:near
+	extrn	fdos_nocrit:near
 	extrn	mul32:near
 
 	public	func73
 func73:
+	cmp	al,2			; function 7302h?
+	 je	func7302		; yes
 	cmp	al,3			; function 7303h?
 	 je	func7303		; yes
+	cmp	al,5			; function 7305h?
+	 jne	func73_error		; no
+	jmp	func7305
+func73_error:
 	mov	ax,7300h		; function not supported
 	clc
+	ret
+
+;	*************************************
+;	***    DOS Function 7302h         ***
+;	***    Get Extended DPB           ***
+;	*************************************
+;
+;Entry:	DL	= drive number
+;	ES:DI	= pointer to buffer for Extended DPB structure
+;	CX	= length of buffer
+;Exit:	ES:DI	preserved
+;	CF clear
+;Error:	CF set
+;	AX	= error code
+
+func7302:
+	cmp	cx,EDPB_LEN+2		; enough buffer space for data?
+	 jae	f7302_10
+	mov	ax,18h			; return 18h (bad request structure length)
+	stc
+	jmp	f7302_exit		; no, then exit with error
+f7302_10:
+	xor	dh,dh
+	call	fdos_DISKINFO		; get drive info, ES:BX -> DDSC
+	 jnc	f7302_20
+	mov	ax,0fh			; return 0fh (invalid drive)
+	stc
+	jmp	f7302_exit		; error if invalid drive
+f7302_20:
+	push	ds
+	lds	bp,int21regs_ptr	; DS:DI -> Extended DPB structure
+	mov	di,ds:reg_DI[bp]
+	mov	word ptr [di],EDPB_LEN	; length of data
+	inc	di			; skip to begin of EDPB
+	inc	di
+	mov	ds,ds:reg_ES[bp]
+	push	ds
+	push	es
+	pop	ds
+	pop	es			; ES:DI -> EDPB, DS:BX -> DDSC
+	push	di
+	mov	si,bx			; copy standard DPB from DDSC
+	mov	cx,DDSC_FREE
+	rep	movsb
+	pop	di
+	xor	dh,dh
+	mov	es:EDPB_DPBFLAGS[bx],dh	; clear DBP flags
+	lea	si,ds:DDSC_BFREE[bx]	; copy remaining EDPB portion from DDSC
+	add	di,DDSC_FREE
+	mov	cx,DDSC_FSVER-DDSC_BFREE
+	rep	movsb
+	pop	ds
+	push	ds
+	lds	bp,int21regs_ptr
+	xor	ax,ax
+	mov	ds:reg_AX[bp],ax	; return AX
+	pop	ds
+	clc
+f7302_exit:
 	ret
 
 ;	*************************************
@@ -35,7 +102,6 @@ func73:
 ;Error:	CF set
 ;	AX	= error code
 
-	Public	func7303
 func7303:
 	les	bp,int21regs_ptr	; ES:DI = pointer to drive path
 	mov	di,es:reg_DX[bp]
@@ -136,15 +202,56 @@ f7303_50:
 	clc
 f7303_exit:
 	ret
-f7303_error1:
-;	call	error_exit		; generate critical error
-	mov	ax,0fh			; return 0fh (invalid drive)
+
+;	*************************************
+;	***    DOS Function 7305h         ***
+;	***    Extended Disk Read/write   ***
+;	*************************************
+;
+;Entry:	DL	= drive number
+;	DS:BX	= pointer to disk address packet
+;	CX	= FFFFh
+;	SI	= read/write mode
+;Exit:	CF clear
+;Error:	CF set
+;	AX	= error code
+
+func7305:
+	cmp	cx,0ffffh		; is CX=FFFFh given?
+	 je	f7305_10		; yes
+	mov	ax,57h			; if not, return 18h (invalid parameter)
 	stc
+	jmp	f7305_exit		; no, then exit with error
+f7305_10:
+	push	es
+	les	bp,int21regs_ptr	; ES:BX -> disk address structure
+	mov	si,es:reg_SI[bp]
+	mov	bx,es:reg_BX[bp]
+	mov	es,es:reg_DS[bp]
+	mov	FD_FUNC,FD_DDIO
+	dec	dl			; 0-based drive number
+	mov	byte ptr FD_DDIO_DRV_OP,dl
+	mov	ax,es:[bx]		; logical sector number
+	mov	FD_DDIO_STARTLOW,ax
+	mov	ax,es:2[bx]
+	mov	FD_DDIO_STARTHIGH,ax
+	mov	ax,es:4[bx]		; sectors to transfer
+	mov	FD_DDIO_NSECTORS,ax
+	mov	ax,es:6[bx]		; buffer address
+	mov	FD_DDIO_DMAOFF,ax
+	mov	ax,es:8[bx]
+	mov	FD_DDIO_DMASEG,ax
+	test	si,1			; test if read or write operation is requested
+	 jnz	f7305_20
+	mov	byte ptr FD_DDIO_DRV_OP+1,1
+	jmps	f7305_30
+f7305_20:
+	mov	byte ptr FD_DDIO_DRV_OP+1,2
+f7305_30:
+	pop	es
+	call	fdos_nocrit		; call fdos function
+f7305_exit:
 	ret
-f7303_error2:
-;	call	error_exit		; generate critical error
-	mov	ax,18h			; return 18h (bad request structure length)
-	jmps	f7303_exit
 
 PCMODE_DATA	dseg	word
 

@@ -1512,7 +1512,17 @@ genioctlTable	label	byte
 	dw	offset CGROUP:ioctl_getmedia
 	db	RQ19_SETMEDIA		; set media id
 	dw	offset CGROUP:ioctl_setmedia
+	db	RQ19_LOCKLOG
+	dw	offset CGROUP:ioctl_locklogical
+	db	RQ19_LOCKPHYS
+	dw	offset CGROUP:ioctl_lockphysical
+	db	RQ19_UNLOCKLOG
+	dw	offset CGROUP:ioctl_unlocklogical
+	db	RQ19_UNLOCKPHYS
+	dw	offset CGROUP:ioctl_unlockphysical
 	db	0			; terminate the list
+
+ioctl_cat	db	0		; category code for dd_geniotcl
 
 point_ioctl_packet:
 ;------------------
@@ -2002,6 +2012,13 @@ ioctl_setmedia:
 	mov	P_ROSCMD[bp],ROS_WRITE	; write to floppy/hard disk
 	jmp	rw_media		; write the boot sector
 setmedia10:
+	ret
+
+ioctl_locklogical:
+ioctl_lockphysical:
+ioctl_unlocklogical:
+ioctl_unlockphysical:
+	xor	ax,ax			; return success
 	ret
 
 rw_media:
@@ -3084,8 +3101,6 @@ extoffvalid	db	0		; extoffset valid flag
 
 	Public	init_runit
 init_runit	db	0		; poked with ROS Unit at boot
-
-ioctl_cat	db	0		; category code for dd_geniotcl
 
 IDATA	ends
 

@@ -53,6 +53,28 @@ of the next patches, but to others there is currently no simple solution.
   DPB to access the partition, probably causing loss of data when writing to
   it. The next version of DOSLFN will probably fix this bug.
   Another prominent example is ScanDisk from MS-DOS 7.x.
+  Update (24.3.2004): I have implemented additional functions of the DOS 7 API
+  to make ScanDisk work on FAT32 drives, however, to enable this functionality,
+  ScanDisk must be given version number 7.1 with the SetVer command.
 - The DR-DOS BDOS loader currently does not support booting from FAT32 drives;
   I will probably fix this in one of the next patches.
   Update (15.1.2004): This has been fixed now, please test it.
+- Apparently, the int 25/26h absolute disk read/write interface in MS-DOS has
+  a bug that keeps it from working on FAT32 drives. DR-DOS, on the other hand,
+  does not have this bug, and will happily work (at least theoretically) on
+  partitions that are up to 2 terabytes in size. This would hardly pose a
+  problem, however, some disk tools abuse this as a test to check whether a
+  partition has been formatted with FAT32, causing them to fail on FAT32 drives
+  in DR-DOS. Again, this is a bug in these tools, not in DR-DOS, and if you
+  encounter one of these programs, please contact its author and ask him to
+  correct this.
+  Note to programmers: It should be obvious that the support for the FAT32 file
+  system is in no way dependent on the presence of the MS-DOS 7.1 API, yet many
+  still seem to think "no MS-DOS FAT32 API = no FAT32", or they just check for
+  version numbers instead of APIs. Also, the presence of a bug or limitation in
+  one DOS is nothing you can rely on; software can be written to work around
+  known bugs in an OS, but should never rely on them or exploit them.
+  Since the int 25/26h interface is present in all versions of DOS and int
+  21h/ax=7305h does not offer any substantial benefits over it on non-MS-DOS
+  PC operating systems, the int 25/26h interface should be given preference and
+  int 21h/ax=7305 should only be used as a fallback if the former fails.

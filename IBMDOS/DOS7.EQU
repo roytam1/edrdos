@@ -16,3 +16,6 @@ FREED_FREEPCL	equ	dword ptr 1ch	; available physical allocation units
 FREED_NPCLUS	equ	dword ptr 20h	; number of physical allocation units
 ;FREED_RESERVED	equ	24h	; reserved bytes
 FREED_LEN	equ	24h	; length of data
+
+EDPB_DPBFLAGS	equ	byte ptr 18h	; DPB flags (undocumented)
+EDPB_LEN	equ	3dh		; length of Extended DPB structure

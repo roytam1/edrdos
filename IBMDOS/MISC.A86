@@ -414,7 +414,8 @@ else
 	mov	ax,dos_version		; version returned in AX
 endif
 ReturnVersionNumber:
-	xor	bx,bx			; zero BX and CX
+;	xor	bx,bx			; zero BX and CX
+	mov	bh,0eeh			; OEM = EEh (DR DOS)
 	xor	cx,cx
 	call	return_BX
 	call	return_CX
@@ -456,7 +457,13 @@ f33_40:
 
 if DOS5
 f33_60:
-	mov	reg_BX[bp],TRUE_VERSION	; return version number
+	mov	es,current_psp
+	mov	ax,PSP_VERSION		; reported version for current program
+	cmp	ax,dos_version		; has this been faked with SETVER?
+	mov	reg_BX[bp],ax
+	 jne	f33_61			; yes, then fake the true version, too
+	mov	reg_BX[bp],TRUE_VERSION	; if not, then honestly return true version number
+f33_61:
 	mov	ax,patch_version
 	mov	reg_DX[bp],ax		; return revision+HMA
 	ret

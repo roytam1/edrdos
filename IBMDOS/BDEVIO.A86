@@ -158,14 +158,16 @@ diradd		dw	0		; sector offset of 1st root DIR sector
 LOCAL_DDSC_LEN	equ	offset $ - offset local_ddsc
 
 local_ddsc2	rb	0
+;		dw	0,0		; total free clusters on drive
+;		dw	0		; FAT flags
+;		dw	0		; FS info
+;		dw	0		; backup boot sec
 bdatadd		dw	0,0
 blastcl		dw	0,0		; # last cluster (32-bit)
 		dw	0,0		; # sectors per FAT (32-bit)
-		dw	0,0		; next block to allocate
-		dw	0,0		; total free clusters on drive
-		dw	0		; FAT flags
-		dw	0		; version of file system
 fsroot		dw	0,0		; first cluster of root dir
+;		dw	0,0		; next block to allocate
+;		dw	0		; version of file system
 
 LOCAL_DDSC2_LEN	equ	offset $ - offset local_ddsc2
 
