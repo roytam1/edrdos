@@ -56,6 +56,12 @@ of the next patches, but to others there is currently no simple solution.
   Update (24.3.2004): I have implemented additional functions of the DOS 7 API
   to make ScanDisk work on FAT32 drives, however, to enable this functionality,
   ScanDisk must be given version number 7.1 with the SetVer command.
+  Update (20.4.2004): DOSLFN no longer shows garbage in the root dir of FAT32
+  drives, but it still does not work. The reason for this is currently unknown.
+  Scandisk will always report that the free disk space on FAT32 drives is wrong
+  if run under DR-DOS. When asked to "fix" this, it apparently does not change
+  the value in the FSInfo block, but still claims that it is wrong. This is
+  probably just a rounding error in Scandisk that can be ignored.
 - The DR-DOS BDOS loader currently does not support booting from FAT32 drives;
   I will probably fix this in one of the next patches.
   Update (15.1.2004): This has been fixed now, please test it.

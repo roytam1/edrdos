@@ -913,6 +913,9 @@ shell_error:
 	mov	dx,offset bad_shell
 	jmp	config_error
 
+func_hilastdrive:	; HILASTDRIVE=d:
+	or	lastdrvIn,LASTDRV_IN_HMA+LASTDRV_IN_UMB
+					; enable HMA and UMB usage for LDT
 
 func_lastdrive:		; LASTDRIVE=d:
 	call	atoi			; are we supplying a decimal number?
@@ -976,7 +979,8 @@ numlock20:
 
 
 func_hibuffers:		; HIBUFFERS=nn[,nn]
-	or	buffersIn,BUFFERS_IN_HMA
+	or	buffersIn,BUFFERS_IN_HMA+BUFFERS_IN_UMB
+					; enable HMA and UMB usage for disk buffers
 ;	jmp	func_buffers
 
 func_buffers:		; BUFFERS=nn[,nn]
@@ -1008,6 +1012,9 @@ buffer_error:
 	mov	dx, offset bad_buffers
 	jmp	config_error
 
+func_hifiles:		; HIFILES=nn
+	or	filesIn,FILES_IN_HMA+FILES_IN_UMB
+					; enable HMA and UMB usage for file handles
 
 func_files:		; FILES=nn
 	call	atoi			; AX = # of files
@@ -1028,7 +1035,9 @@ files_error:
 	mov	dx, offset bad_files
 	jmp	config_error
 
-
+func_hifcbs:		; HIFCBS=nn
+	or	filesIn,FILES_IN_HMA+FILES_IN_UMB
+					; enable HMA and UMB usage for file handles
 
 func_fcbs:		; FCBS=nn
 	call	atoi			; AX = # of files
@@ -1073,6 +1082,10 @@ func_switches:		; SWITCHES=...
 	mov	boot_options,0		; disable boot options
 func_switches10:
 	ret
+
+func_histacks:		; HISTACKS=number,size
+	or	stacksIn,STACKS_IN_HMA+STACKS_IN_UMB
+					; enable HMA and UMB usage for stacks
 
 func_stacks:		; STACKS=number,size
 ;-----------
@@ -1590,6 +1603,7 @@ func_dos_high:
 	mov	bios_target_seg,0FFFFh
 	mov	hidos,TRUE		; update hidos flag to be ON
 	or	buffersIn,BUFFERS_IN_HMA; buffers at seg FFFF too
+;	or	filesIn,FILES_IN_HMA	; and also files
 	ret
 
 func_dos_low:
@@ -1600,6 +1614,9 @@ func_dos_low:
 	mov	bios_target_seg,0
 	mov	hidos,FALSE		; system allocation from low memory
 	mov	buffersIn,0		; buffers from low memory
+	mov	filesIn,0		; also files
+	mov	stacksIn,0		; and stacks
+	mov	lastdrvIn,0		; and LDT
 	ret
 
 func_dos_umb:
@@ -1607,6 +1624,10 @@ func_dos_umb:
 ; allocate Upper Memory Blocks and link them to the DMD chain
 ;
 	mov	hidos,TRUE		; update hidos flag to be ON
+	or	buffersIn,BUFFERS_IN_UMB; enable UMB usage for buffers
+	or	filesIn,FILES_IN_UMB	; and files
+	or	stacksIn,STACKS_IN_UMB	; and stacks
+	or	lastdrvIn,LASTDRV_IN_UMB; and LDT
 	call	initialise_dmd_upper	; build initial upper memory DMD
 	 jc	func_dos_umb30
 func_dos_umb10:
@@ -3296,6 +3317,9 @@ endif
 	extrn	history_size:word	;
 	extrn	num_stacks:word
 	extrn	stack_size:word
+	extrn	filesIn:byte
+	extrn	stacksIn:byte
+	extrn	lastdrvIn:byte
 
 if not ADDDRV
 	extrn	hidos:byte
@@ -3453,12 +3477,16 @@ if not ADDDRV
 	dw	cmd_country,	func_country,	0	; COUNTRY=nnn,nnn,country
 	dw	cmd_shell,	func_shell,	0	; SHELL=filename
 	dw	cmd_lastdrive,	func_lastdrive,	0	; LASTDRIVE=d:
+	dw	cmd_hilastdrive,func_hilastdrive,0	; HILASTDRIVE=d:
 	dw	cmd_break,	func_break,	0	; BREAK=ON/OFF
 	dw	cmd_buffers,	func_buffers,	0	; BUFFERS=nn
 	dw	cmd_hibuffers,	func_hibuffers,	0	; HIBUFFERS=nn
 	dw	cmd_fcbs,	func_fcbs,	0	; FCBS=nn
+	dw	cmd_hifcbs,	func_hifcbs,	0	; HIFCBS=nn
 	dw	cmd_files,	func_files,	0	; FILES=nn
+	dw	cmd_hifiles,	func_hifiles,	0	; HIFILES=nn
 	dw	cmd_stacks,	func_stacks,	0	; STACKS=nn
+	dw	cmd_histacks,	func_histacks,	0	; HISTACKS=nn
 	dw	cmd_fastopen,	func_fastopen,	0	; FASTOPEN=nnn
 	dw	cmd_drivparm,	func_drivparm,	0	; DRIVPARM=/d:nn ...
 	dw	cmd_history,	func_history,	0	; HISTORY=ON|OFF,NNN
@@ -3500,12 +3528,16 @@ if not ADDDRV
 cmd_country	db	'COUNTRY',0
 cmd_shell	db	'SHELL',0
 cmd_lastdrive	db	'LASTDRIVE',0
+cmd_hilastdrive	db	'HILASTDRIVE',0
 cmd_break	db	'BREAK',0
 cmd_buffers	db	'BUFFERS',0
 cmd_hibuffers	db	'HIBUFFERS',0
 cmd_fcbs	db	'FCBS',0
+cmd_hifcbs	db	'HIFCBS',0
 cmd_files	db	'FILES',0
+cmd_hifiles	db	'HIFILES',0
 cmd_stacks	db	'STACKS',0
+cmd_histacks	db	'HISTACKS',0
 cmd_fastopen	db	'FASTOPEN',0
 cmd_drivparm	db	'DRIVPARM', 0
 cmd_history	db	'HISTORY', 0

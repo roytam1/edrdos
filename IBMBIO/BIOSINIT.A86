@@ -578,8 +578,9 @@ config_end10:
 	add	ax,15			; round LDT's size up to para
 	shr	ax,cl
 	mov	dl,'L'			; allocate LDT's
+	mov	dh,lastdrvIn
 	call	alloc_instseg		; Allocate memory AX is destination
-	mov	es:F52_PATHOFF[bx],0	; point at the LDT's
+	mov	es:F52_PATHOFF[bx],di	; point at the LDT's
 	mov	es:F52_PATHSEG[bx],ax	; save seg we just allocated
 	pop	es
 
@@ -1138,7 +1139,7 @@ alloc_instseg:
 	pop	cx
 	pop	bx
 	pop	ax
-	 jnz	alloc_hiseg		; no, allocate normally
+	 jnz	alloc_instseg20		; no, allocate normally
 	push	ax
 	push	bx
 	push	cx
@@ -1150,14 +1151,48 @@ alloc_instseg:
 	pop	dx
 	pop	cx
 	pop	bx
-	 jc	alloc_intseg10		; did we get any ?
+	 jc	alloc_instseg10		; did we get any ?
 	add	sp,WORD
+	xor	di,di
 	clc				; we've done it !!
 	ret	
 
-alloc_intseg10:
+alloc_instseg10:
 	pop	ax			; we didn't manage it...
 ;	jmp	alloc_hiseg
+
+alloc_instseg20:
+	push	bx
+	test	dh,ALLOC_IN_HMA
+	 jz	alloc_instseg30
+	push	es
+	push	ax
+	mov	cl,4			; convert paragraphs to bytes
+	shl	ax,cl
+	push	ax
+	call	SetupHMA		; make sure HMA chain is established
+	pop cx				; CX = bytes wanted
+	mov	dx,0FFFFh		; anywhere is OK
+	call	AllocHMA		; ES:DI -> allocated data
+	pop	ax
+	 jc	alloc_instseg25
+	mov	ax,es
+	pop	es
+	jmps	alloc_instseg55
+alloc_instseg25:
+	pop	es
+alloc_instseg30:
+	test	dh,ALLOC_IN_UMB
+	 jz	alloc_instseg40		; allocation from UMB's OK ?
+	call	alloc_upper		; yes, try and allocate memory there
+	 jnc	alloc_instseg50
+alloc_instseg40:
+	call	alloc_seg		; allocate memory in bottom 640 K
+alloc_instseg50:
+	xor	di,di
+alloc_instseg55:
+	pop	bx
+	ret
 
 	Public	alloc_hiseg
 alloc_hiseg:
@@ -1230,6 +1265,7 @@ alloc_s10:
 	hlt				; ##jc##
 	jmps	alloc_s10
 
+	Public	alloc_upper
 alloc_upper:
 ;-----------
 ; On Entry:
@@ -1590,6 +1626,7 @@ include	initmsgs.def				; Include TFT Header File
 	extrn	history_flg:byte
 	extrn	next_drv:byte
 	extrn	dev_count:byte
+	extrn	lastdrvIn:byte
 
 ;
 ;	PUBLIC Variables which are initialised by the BIOS before the

@@ -17,7 +17,7 @@
   labels not to be found when other attributes were also given
 - fixed bug in SynchroniseBuffers routine that sometimes caused data
   inconsistensies between buffers and disk
-
+(24.3.2004):
 - restructured DR-DOS DDSC to make it more compatible with DOS 7 Extended DPB
   structure
 - implemented function 7302h (Get Extended DPB)
@@ -36,6 +36,14 @@
   a successful operation to make Scandisk work again after version change
 - reduced maximum cluster size reported by function 36h for FAT32 partitions to
   32K to improve compatibility with existing disk tools.
+(20.4.2004):
+- removed a rather dirty hack that was needed to work around a bug in the
+  DR-DOS 7.03 boot sector code
+- fixed bugs related to STACKS command
+- added code to allow buffers, files, fcbs, stacks and drive table to be loaded
+  in upper or high memory.
+- added new config.sys commands HIFILES, HIFCBS, HISTACKS and HILASTDRIVE to
+  load these data structures high even if DOS itself is loaded low
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

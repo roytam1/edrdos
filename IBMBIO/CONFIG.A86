@@ -75,8 +75,9 @@ INITCODE	CSEG	PARA 'INITCODE'
 	extrn	AllocHMA:near
 	extrn	SetupHMA:near
 	extrn	alloc_instseg:near	; Allocate "Segment" Instance Memory
-	extrn	alloc_hiseg:near	; Allocate "Segment" High Memory
+	extrn	alloc_hiseg:near	; Allocate "Segment" Upper or Low Memory, depending on hidos flag
 	extrn	alloc_seg:near		; Allocate "Segment" Memory
+	extrn	alloc_upper:near	; Allocate "Segment" Upper Memory
 	extrn	config_process:near
 	extrn	InitStacks:near
 	extrn	HookInt2F:near
@@ -383,6 +384,7 @@ setup_hist20:
 	push	ax			; save buffers size in bytes
 	shr	ax,cl			; convert to para's
 	mov	dl,'H'			; History buffer
+	xor	dh,dh
 	call	alloc_instseg		; Allocate Buffer
 	mov	es:word ptr 00[si],ax	; Buffer Start Address
 	pop	cx			; recover buffer size in bytes
@@ -764,11 +766,12 @@ setup_ldt:
 	mov	al,es:F52_LASTDRV[bx]	; lastdrive
 	push	ax			; save for later
 	les	di,es:F52_PATHPTR[bx]	; now initialise the CSD's
+	mov	bx,di
 	xor	al,al			; to zero
 	rep	stosb			; zero them
 	pop	ax			; recover lastdrive
 
-	xor	bx,bx			; start with zero offset
+;	xor	bx,bx			; start with zero offset
 	xor	cx,cx			; start with drive A
 	xchg	al,cl			; AH = physical limit, CX logical limit
 ldt_init:
@@ -964,7 +967,7 @@ setup_b40:
 	mov	dl,'B'			; allocate as a Buffer
 	test	buffersIn,BUFFERS_IN_UMB
 	 jz	setup_b50		; allocation from UMB's OK ?
-	call	alloc_hiseg		; yes, try and allocate memory there
+	call	alloc_upper		; yes, try and allocate memory there
 	 jnc	setup_b60
 setup_b50:
 	call	alloc_seg		; allocate memory in bottom 640 K
@@ -1034,15 +1037,45 @@ setup_dh20:
 
 	mov	ax,DHNDL_LEN			; How many bytes do we need
 	mul	cx				; for the structure
-	mov	dx,ax				; including the control
+	add	ax,DCNTRL_LEN			; including the control
+	mov	dx,ax
 
-	add	ax,DCNTRL_LEN+15		; Ensure the new structure is
+	test	filesIn,FILES_IN_HMA
+	 jz	setup_dh23
+	push	es
+	push	bx
+	push	ax
+	push	cx
+	push	dx
+	call	SetupHMA			; make sure HMA chain is established
+	pop cx ! push cx			; CX = bytes wanted
+	mov	dx,0FFFFh			; anywhere is OK
+	call	AllocHMA			; ES:DI -> allocated data
+	pop	dx
+	pop	cx
+	pop	ax
+	pop	bx
+	 jc	setup_dh22
+	mov	ax,es
+	pop	es
+	jmps	setup_dh27
+setup_dh22:
+	pop	es
+setup_dh23:
+	add	ax,15				; Ensure the new structure is
 	shr ax,1 ! shr ax,1			; a paragraph value
 	shr ax,1 ! shr ax,1			; allocate some memory
 	mov	dl,'F'				; allocate for Files
-    call    alloc_seg           
-
-	mov	es:DCNTRL_DSOFF[bx],0		; link the new seg
+	test	filesIn,FILES_IN_UMB		; UMB usage activated?
+	 jz	setup_dh25			; no, use conventional mem
+	call	alloc_upper			; then try to move them there first
+	 jnc	setup_dh26			; if upper fails, try low mem
+setup_dh25:
+	call    alloc_seg           
+setup_dh26:
+	xor	di,di
+setup_dh27:
+	mov	es:DCNTRL_DSOFF[bx],di		; link the new seg
 	mov	es:DCNTRL_DSSEG[bx],ax		; to the end of the list
 	
 ; We can now initialise the new structure
@@ -1281,6 +1314,7 @@ include	initmsgs.def				; Include TFT Header File
 	Public	max_clsize, init_buf, num_read_ahead_buf
 	Public	buffersIn, history_flg, history_size
 	Public	dbcs_tbl, ctry_info, boot_device, boot_drv, resdev_chain
+	Public	filesIn, stacksIn, lastdrvIn
 
 
 history_flg	db	0	; Disable history buffers to save RAM
@@ -1291,7 +1325,11 @@ cfg_buffer	rb	CFG_BUF_LEN	; extra termination for buggy Windows
 	
 init_buf	db	MIN_NUM_BUFFS	; default # of buffers
 num_read_ahead_buf db	DEF_READ_AHEAD	; default # of read-ahead
-buffersIn	db	0		; default is low
+buffersIn	db	0		; desired location of buffers, default is low
+
+filesIn		db	0		; desired location of file handles, default is low
+stacksIn	db	0		; desired location of stacks, default is low
+lastdrvIn	db	0		; desired location of LDT, default is low
 
 dev_count	db	0		; count of new drives (used by preload)
 next_drv	db	0		; Next Drive to Allocate
