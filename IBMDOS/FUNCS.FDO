@@ -1760,7 +1760,7 @@ file_update:
 ;;;	call	timestamp_dhndl		; record the current time
 	cmp	dosfat,FAT32		; is this a FAT32 file system?
 	 jne	file_update05		; no, then skip this entry
-	mov	ax,es:DHNDL_BLK1+2[bx]	; get high word of 1st block in file
+	mov	ax,es:DHNDL_BLK1H[bx]	; get high word of 1st block in file
 	push	di
 	lea	di,DBLOCK1H[di]
 	stosw				; and store it in the dir entry

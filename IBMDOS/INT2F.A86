@@ -718,13 +718,16 @@ i2f_121F_30:
 	stosw
 	mov	ax,ds			; AX = DDSC seg
 	stosw
-;	lea	di,LDT_BLK
 	mov	ax,0FFFFh		; AX = FFFF
 	stosw ! stosw ! stosw		; fill in block info
-	stosw ! stosw
+;	stosw ! stosw
 ;	lea	di,LDT_ROOTLEN
 	mov	ax,2
 	stosw				; set root length
+;	lea	di,LDT_BLKH
+	stosw
+;	lea	di,LDT_ROOTH
+	stosw
 	pop	di
 	pop dx ! pop si ! pop ds
 	ret
@@ -1042,6 +1045,8 @@ i2f_1008:
 ; On Exit:
 ;	None
 ;
+	xchg	cx,ax
+	xor	dx,dx
 	jmp	fixup_hashing
 
 endif

@@ -410,7 +410,7 @@ fdw_t10:				; AX = # of clusters required in file
 	test	dx,dx
 	 jnz	fdw_t20
 	xchg	ax,es:DHNDL_BLK1[bx]	; forget about chain
-	xchg	dx,es:DHNDL_BLK1+2[bx]
+	xchg	dx,es:DHNDL_BLK1H[bx]
 	jmps	fdw_t50
 
 fdw_t20:
@@ -418,7 +418,7 @@ fdw_t20:
 	mov	fdw_trunc_cl,ax		; # of blocks to keep
 	mov	fdw_trunc_cl+2,dx
 	mov	ax,es:DHNDL_BLK1[bx]	; get first block in file
-	mov	dx,es:DHNDL_BLK1+2[bx]
+	mov	dx,es:DHNDL_BLK1H[bx]
 fdw_t30:				; scan all block we want to keep
 ;	push	cx
 	push	dx
@@ -464,9 +464,9 @@ fdw_t60:
 	mov	es:DHNDL_SIZEHI[bx],ax
 	xor	ax,ax			; cause reads/writes to scan
 	mov	es:DHNDL_BLK[bx],ax	;   block chain from start
-	mov	es:DHNDL_BLK+2[bx],ax
+	mov	es:DHNDL_BLKH[bx],ax
 	mov	es:DHNDL_IDX[bx],ax
-	mov	es:DHNDL_IDX+2[bx],ax
+	mov	es:DHNDL_IDXH[bx],ax
 	mov	fdos_ret,ax		; no logical errors
 	ret
 
@@ -652,7 +652,7 @@ fdw_e04:
 fdw_e05:
 ;	xchg	ax,cx			; CX blocks are required
 	mov	ax,es:DHNDL_BLK1[bx]	; assume we need to follow from start
-	mov	dx,es:DHNDL_BLK1+2[bx]
+	mov	dx,es:DHNDL_BLK1H[bx]
 	test	ax,ax
 	 jnz	fdw_e06
 	test	dx,dx
@@ -664,7 +664,7 @@ fdw_e06:
 	sbb	fdw_extend_cl+2,0
 ;	mov	dx,es:DHNDL_BLK[bx]	; do we have a current block ?
 	mov	ax,es:DHNDL_BLK[bx]	; do we have a current block ?
-	mov	dx,es:DHNDL_BLK+2[bx]
+	mov	dx,es:DHNDL_BLKH[bx]
 	test	dx,dx			; if not we have to start
 	 jnz	fdw_e07
 	test	ax,ax
@@ -672,16 +672,16 @@ fdw_e06:
 fdw_e07:
 ;	mov	ax,dx			; new starting block as this must
 	mov	ax,es:DHNDL_BLK[bx]
-	mov	dx,es:DHNDL_BLK+2[bx]
+	mov	dx,es:DHNDL_BLKH[bx]
 ;	sub	cx,es:DHNDL_IDX[bx]	;  be less than extended size
 	mov	cx,es:DHNDL_IDX[bx]	;  be less than extended size
 	sub	fdw_extend_cl,cx
-	mov	cx,es:DHNDL_IDX+2[bx]
+	mov	cx,es:DHNDL_IDXH[bx]
 	sbb	fdw_extend_cl+2,cx
 	jmps	fdw_e11
 fdw_e10:
 	mov	ax,es:DHNDL_BLK1[bx]
-	mov	dx,es:DHNDL_BLK1+2[bx]
+	mov	dx,es:DHNDL_BLK1H[bx]
 fdw_e11:
 ;	 jcxz	fdw_e20			; bail out of we have enough
 	cmp	fdw_extend_cl+2,0
@@ -722,7 +722,7 @@ fdw_e30:
 	 jc	fdw_e35
 	les	bx,current_dhndl
 	mov	es:DHNDL_BLK1[bx],ax	; remember initial block
-	mov	es:DHNDL_BLK1+2[bx],dx
+	mov	es:DHNDL_BLK1H[bx],dx
 	clc
 fdw_e35:
 	ret
@@ -778,7 +778,7 @@ fdrw_seek:
 	mov	ax,blkidx
 	mov	dx,blkidx+2
 ;	cmp	ax,es:DHNDL_IDX[bx]	; do we know this block ?
-	cmp	dx,es:DHNDL_IDX+2[bx]	; do we know this block ?
+	cmp	dx,es:DHNDL_IDXH[bx]	; do we know this block ?
 	 jb	fdrw_seek10		; we can't go backwards, use 1st block
 	 ja	fdrw_seek05
 	cmp	ax,es:DHNDL_IDX[bx]
@@ -788,7 +788,7 @@ fdrw_seek05:
 ;	 jcxz	fdrw_seek10		; use 1st block if it isn't valid
 	mov	cx,es:DHNDL_BLK[bx]	; get last index block
 	mov	fdrw_seek_cl,cx
-	mov	cx,es:DHNDL_BLK+2[bx]
+	mov	cx,es:DHNDL_BLKH[bx]
 	mov	fdrw_seek_cl+2,cx
 	cmp	fdrw_seek_cl+2,0
 	 jne	fdrw_seek06
@@ -796,12 +796,12 @@ fdrw_seek05:
 	 je	fdrw_seek10		; use 1st block if it isn't valid
 fdrw_seek06:
 	sub	ax,es:DHNDL_IDX[bx]	; skip this many
-	sbb	dx,es:DHNDL_IDX+2[bx]
+	sbb	dx,es:DHNDL_IDXH[bx]
 	jmps	fdrw_seek20
 fdrw_seek10:
 	mov	cx,es:DHNDL_BLK1[bx]	; start with 1st block
 	mov	fdrw_seek_cl,cx
-	mov	cx,es:DHNDL_BLK1+2[bx]
+	mov	cx,es:DHNDL_BLK1H[bx]
 	mov	fdrw_seek_cl+2,cx
 fdrw_seek20:
 ;	xchg	ax,cx			; AX = starting cluster
@@ -839,11 +839,11 @@ fdrw_seek40:
 	mov	dx,blkidx+2
 ;	mov	es:DHNDL_IDX[bx],dx	; remember this position for next time
 	mov	es:DHNDL_IDX[bx],ax	; remember this position for next time
-	mov	es:DHNDL_IDX+2[bx],dx
+	mov	es:DHNDL_IDXH[bx],dx
 	pop	ax
 	pop	dx
 	mov	es:DHNDL_BLK[bx],ax
-	mov	es:DHNDL_BLK+2[bx],dx
+	mov	es:DHNDL_BLKH[bx],dx
 	mov	blk,ax			; save the block for coniguous checks
 	mov	blk+2,dx
 	mov	bx,blkoffset

@@ -68,8 +68,9 @@ MAX12		equ	0FF6h		; max. disk size w/ 12-bit media
 HCB_LINK	equ	word ptr 0	; link to next control block
 HCB_DRV		equ	byte ptr 2	; drive for this entry or 0FFh
 HCB_CLU		equ	word ptr 4	; cluster number or 0000 if root
-HCB_CNT		equ	word ptr 6	; number of hashed entries
-HCB_DATA	equ	word ptr 8	; hash buffer data
+HCB_CLUH	equ	word ptr 6	; high word of cluster number
+HCB_CNT		equ	word ptr 8	; number of hashed entries
+HCB_DATA	equ	word ptr 10	; hash buffer data
 
 
 ;		      Structure of DOS FCB

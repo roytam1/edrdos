@@ -1714,9 +1714,10 @@ creat_handle20:
 	 jne	creat_handle25		; no, then skip
 	mov	ax,DBLOCK1H[si]		; high word of cluster
 creat_handle25:
+	lea	di,DHNDL_BLK1H[bx]
 	stosw
 	lea	si,DTIME[si]
-;	lea	di,DHNDL_TIME[bx]
+	lea	di,DHNDL_TIME[bx]
 	movsw				; copy the time
 ;	lea	di,DHNDL_DATE[bx]
 	movsw				; and the date
@@ -1728,21 +1729,25 @@ creat_handle25:
 	stosw ! stosw
 ;	lea	di,DHNDL_IDX[bx]
 	stosw				; zero block index
+	lea	di,DHNDL_IDXH[bx]
 	stosw
 if DOS5
 	call	hdsblk			; get directory block
-;	lea	di,DHNDL_DBLK[bx]
+	lea	di,DHNDL_DBLK[bx]
 	stosw
 	mov	ax,dx
+	lea	di,DHNDL_DBLKH[bx]
 	stosw
 else
-;	lea	di,DHNDL_BLK[bx]
+	lea	di,DHNDL_BLK[bx]
 	stosw				; and current block
+	lea	di,DHNDL_BLKH[bx]
 	stosw
 	call	hdsblk			; get directory block
-;	lea	di,DHNDL_DBLK[bx]
+	lea	di,DHNDL_DBLK[bx]
 	stosw
 	mov	ax,dx
+	lea	di,DHNDL_DBLKH[bx]
 	stosw
 endif
 	mov	ax,dcnt			; set DCNT of file
@@ -1759,7 +1764,9 @@ endif
 	lea	di,DHNDL_SHARE[bx]	; zero sharing record
 	stosw
 if DOS5
-	stosw ! stosw ! stosw ! stosw	; zero DHNDL_BLK + IFS
+	stosw ! stosw ! stosw		; zero DHNDL_BLK + IFS
+	lea	di,DHNDL_BLKH[bx]
+	stosw
 endif
 	callf	ss:share_stub+S_OPEN	; we have opened this handle
 					;  ask SHARE to register it
@@ -1799,7 +1806,7 @@ select_handle:		; select directory of current handle
 	call	select_physical_drv	; select the drive
 	pop bx ! pop es
 	mov	ax,es:DHNDL_DBLK[bx]
-	mov	dx,es:DHNDL_DBLK+2[bx]
+	mov	dx,es:DHNDL_DBLKH[bx]
 	mov	fdos_hds_blk,ax		; copy HDS_BLK
 	mov	fdos_hds_blk+2,dx
 	clc				; handle is OK file

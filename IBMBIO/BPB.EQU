@@ -54,3 +54,4 @@ BPB_RESRVD2	dw	6 dup (?)
 BPB		ends
 
 BPB_LENGTH	equ	size BPB
+OLD_BPB_LENGTH	equ	31

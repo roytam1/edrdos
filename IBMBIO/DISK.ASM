@@ -850,7 +850,7 @@ getdrivegeo:				; get number of heads & sectors
 ; On Exit:
 ;	max_head & max_sect
 
-	pushx	<cx,dx,es>
+	pushx	<cx,dx,es,di>
 	mov	ah,ROS_PARAM		; get drive parameters
 	int_____DISK_INT
 	xor	dl,dl			; isolate head bits
@@ -859,7 +859,7 @@ getdrivegeo:				; get number of heads & sectors
 	mov	max_head,dx		; number of heads on this drive
 	and	cx,3fh			; isolate sector bits
 	mov	max_sect,cx		; number of sectors per track on this drive
-	popx	<es,dx,cx>
+	popx	<di,es,dx,cx>
 	ret
 
 login_CHS2LBA:
@@ -1556,7 +1556,8 @@ get1:
 	pop	es
 	lea	di,7[bx]		; ES:DI -> BPB in parameter block
 	pop	ds			; DS:SI -> BPB to copy
-	mov	cx,UDSC_BPB_LENGTH
+;	mov	cx,UDSC_BPB_LENGTH
+	mov	cx,OLD_BPB_LENGTH
 	rep	movsb			; copy the BPB across to user
 	pop	di
 	pop	es
@@ -1594,12 +1595,14 @@ ioctl_set:	; set device parameters
 set1:
 	lea	si,7[bx]		; DS:SI -> new BPB from user
 	xchg	ax,di			; ES:DI -> BPB in es:UDSC_
-	mov	cx,UDSC_BPB_LENGTH
+;	mov	cx,UDSC_BPB_LENGTH
+	mov	cx,OLD_BPB_LENGTH
 	rep	movsb			; copy BPB into UDSC as new default
 	xchg	ax,di			; ES:DI -> UDSC_ again
 
 set2:					; now set track layout
-	lea	si,BPB_LENGTH+7[bx]	; DS:SI -> new user layout
+;	lea	si,BPB_LENGTH+7[bx]	; DS:SI -> new user layout
+	lea	si,OLD_BPB_LENGTH+7[bx]	; DS:SI -> new user layout
 	mov	es,cs:DataSegment
 	mov	di,CG:layout_table	; ES:DI -> BIOS layout table
 	lodsw				; get sector count

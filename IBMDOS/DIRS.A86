@@ -100,6 +100,7 @@ finddfcb_mask	dw	0800h		; hi byte = reject DA_VOLUME attribs
 chdblk		dw	0,0		; current cluster # of directory
 
 rd_pcdir_cl	dw	0,0		; current cluster in rd_pcdir
+find_hcb_cl	dw	0,0		; current cluster in find_hcb
 
 
 BDOS_CODE	cseg
@@ -215,8 +216,11 @@ flush_dirbuf:
 	rep	movsw			; copy modified entry back
 
 	push	ax
-	xor	dh,dh			; we only want HCB_ if it's there
-	mov	cx,dirbcb_cl		;  and it's this cluster
+;	xor	dh,dh			; we only want HCB_ if it's there
+;	mov	cx,dirbcb_cl		;  and it's this cluster
+	xor	ch,ch			; we only want HCB_ if it's there
+	mov	ax,dirbcb_cl		;  and it's this cluster
+	mov	dx,dirbcb_cl+2
 	call	find_hcb		; does an HCB_ exist for this entry ?
 	pop	ax
 	 jc	flush_dir20		; no, skip update
@@ -446,13 +450,17 @@ gtdo3:
 	test	dx,dx
 	 jz	unhashed		;  we must search the hard way
 gtdo31:
-	xchg	ax,bx
+;	xchg	ax,bx
+	push	dx
+	push	ax
 	mov	ax,dcnt			; should we go onto next cluster ?
 	inc	ax			; only if next entry is the start
 	xor	dx,dx			;  of a cluster
 	div	dirperclu
-	xchg	ax,bx
+;	xchg	ax,bx
 	test	dx,dx			; at start of cluster ?
+	pop	ax
+	pop	dx
 	 jnz	unhashed
 	call	getnblk			; onto next cluster until we are
 ;	cmp	ax,lastcl		;  at the end of the chain
@@ -553,23 +561,29 @@ eject
 find_hcb:				; find HCB_ for given drive
 ;--------
 ; On Entry:
-;	CX = cluster we are looking for
-;	DH = 00 if exact match required
+;	DX:AX = cluster we are looking for
+;	CH = 00 if exact match required
 ;	     FF if we want to recyle oldest HCB_
 ; On Exit:
 ;	CY set, AX=0 if HCB_ not found
 ;	CY clear ES:BX = offset of HCB_ (moved to head of list)
-;	(AX/DX trashed, All other regs preserved)
+;	(AX/CX trashed, All other regs preserved)
 ;
 
+	mov	find_hcb_cl,ax
+	mov	find_hcb_cl+2,dx
 	les	bx,hashroot		; get our hashing pointer
 	mov	ax,es
 	or	ax,bx			; is hashing enabled ?
 	 jz	find_hcb30
-	mov	dl,adrive		; look for this drive
-	cmp	cx,es:HCB_CLU[bx]	; does cluster match?
+	mov	cl,adrive		; look for this drive
+	mov	dx,find_hcb_cl
+	cmp	dx,es:HCB_CLU[bx]	; does cluster match?
 	 jne	find_hcb10		; goto next if not
-	cmp	dl,es:HCB_DRV[bx]	; does drive match?
+	mov	dx,find_hcb_cl+2
+	cmp	dx,es:HCB_CLUH[bx]
+	 jne	find_hcb10
+	cmp	cl,es:HCB_DRV[bx]	; does drive match?
 	 jne	find_hcb10		; goto next if not
 ;	clc
 	ret				; we have a match on the 1st one
@@ -580,14 +594,18 @@ find_hcb10:
 	test	ax,ax			; is there one ?
 	 jz	find_hcb20
 	xchg	ax,bx			; AX = previous entry, BX = current
-	cmp	cx,es:HCB_CLU[bx]	; does cluster match?
+	mov	dx,find_hcb_cl
+	cmp	dx,es:HCB_CLU[bx]	; does cluster match?
 	 jne	find_hcb10		; goto next if not
-	cmp	dl,es:HCB_DRV[bx]	; does drive match?
+	mov	dx,find_hcb_cl+2
+	cmp	dx,es:HCB_CLUH[bx]
+	 jne	find_hcb10
+	cmp	cl,es:HCB_DRV[bx]	; does drive match?
 	 jne	find_hcb10		; goto next if not
 ; we have a match, but it's not the first so recycle it
-	mov	dx,es:HCB_LINK[bx]	; get link to the rest of the chain
+	mov	cx,es:HCB_LINK[bx]	; get link to the rest of the chain
 	xchg	ax,bx			; BX = previous entry
-	mov	es:HCB_LINK[bx],dx	; unlink ourselves from chain
+	mov	es:HCB_LINK[bx],cx	; unlink ourselves from chain
 	mov	bx,ax			; BX = current entry
 	xchg	ax,word ptr hashroot	; put current entry at the head
 	mov	es:HCB_LINK[bx],ax	;  and relink the rest of the chain
@@ -597,18 +615,20 @@ find_hcb10:
 find_hcb20:
 ; we have been all along the chain with no luck
 	xor	ax,ax
-	test	dh,dh			; no HCB_ - do we want to recyle ?
+	test	ch,ch			; no HCB_ - do we want to recyle ?
 	 jz	find_hcb30		;  if not skip
 	mov	es:HCB_CNT[bx],ax	; we need to recycle oldest HCB_
-	mov	es:HCB_CLU[bx],cx	;  so mark as us, but with nothing
-	mov	es:HCB_DRV[bx],dl	;  in it
+	mov	dx,find_hcb_cl
+	mov	es:HCB_CLU[bx],dx	;  so mark as us, but with nothing
+	mov	dx,find_hcb_cl+2
+	mov	es:HCB_CLUH[bx],dx
+	mov	es:HCB_DRV[bx],cl	;  in it
 ;	clc
 	ret
 
 find_hcb30:
 	stc				; return failure
 	ret
-
 
 eject
 ;-----
@@ -657,10 +677,10 @@ if DELWATCH
 fixup_hashing:
 ;-------------
 ; On Entry:
-;	AX =	segment of dir buffer
-;	CX =	cluster to fixup (0 = root)
+;	CX =	segment of dir buffer
+;	DX:AX =	cluster to fixup (0 = root)
 ;	DI =	directory entry index (clipped to cluster if subdir)
-;	AX:SI->	dir entry (single entry for hashing)
+;	CX:SI->	dir entry (single entry for hashing)
 ;
 ; On Exit:
 ;	None
@@ -668,14 +688,15 @@ fixup_hashing:
 	push	ds
 	push	es
 
-	xor	dh,dh			; we only want HCB_ if it's there
-	push	ax			; save seg of dir entry
+;	xor	dh,dh			; we only want HCB_ if it's there
+	push	cx			; save seg of dir entry
+	xor	ch,ch			; we only want HCB_ if it's there
 	call	find_hcb		; does an HCB_ exist for this entry ?
 	pop	ds			; DS:SI -> entry to hash
 	 jc	fixup_ck10		; not hashed, skip update
 	cmp	di,es:HCB_CNT[bx]	; is this within the hashed entries ?
 	 jae	fixup_ck10		;  no, skip the fixup
-	call	mkhsh			; AX = hash code of our entry
+	call	mkhsh			; cx = hash code of our entry
 
 	shl	di,1			; DI = offset of hashed entry
 	lea	di,HCB_DATA[bx+di]
@@ -692,11 +713,12 @@ eject
 
 hashsrch:
 ;--------
-;	entry:	AX = starting cluster of directory
+;	entry:	DX:AX = starting cluster of directory
 ;	exit:	AX is possible match index
 ;
-	mov	dh,0FFh			; we want HCB_ even if it's recycled
-	xchg	ax,cx			;  and this block
+;	mov	dh,0FFh			; we want HCB_ even if it's recycled
+	mov	ch,0FFh			; we want HCB_ even if it's recycled
+;	xchg	ax,cx			;  and this block
 	call	find_hcb		; does an HCB_ exist for this entry ?
 ;	mov	ax,0			; assume unhashed search required
 	 jc	hashsrch20		;  start one if no hashing
@@ -729,7 +751,7 @@ hashsrch30:
 rehash_entry:
 ;------------
 ;	entry:	ES:BX -> HCB
-;		AX = hash cluster number
+;		AX = hash cluster number ??? This does not seem to be used...
 
 	call	hash_entries_to_do	; how many entries still to hash ?
 	 jcxz	rehash_entry40		; if we have hashed them all exit
@@ -800,6 +822,8 @@ hash_entries_to_do:
 	cmp	es:HCB_CLU[bx],0	; was it ?
 ;	 je	hash_etd10
 	 jne	hash_etd09		; no, proceed normally
+	cmp	es:HCB_CLUH[bx],0
+	 jne	hash_etd09
 	cmp	dirinroot,0		; is this FAT32?
 	 jne	hash_etd10		; no, proceed with FAT12/16 routine
 hash_etd09:
