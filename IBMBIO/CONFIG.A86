@@ -777,7 +777,11 @@ ldt_init:
 	mov	ax,0FFFFh
 	lea	di,LDT_BLK[bx]		; set to FFFF to force LDT_ rebuild
 	stosw ! stosw ! stosw		;  next two words are FFFF too
-	stosw ! stosw
+;	stosw ! stosw
+	lea	di,LDT_BLKH[bx]
+	stosw
+	lea	di,LDT_ROOTH[bx]
+	stosw
 	lea	di,LDT_ROOTLEN[bx]
 	mov	ax,2
 	stosw				; set the length field

@@ -231,7 +231,7 @@ rebuild_ldt_root10:
 	mov	ax,fdos_hds_blk
 	mov	dx,fdos_hds_blk+2
 	mov	es:LDT_ROOT[bx],ax	; update our root block
-	mov	es:LDT_ROOT+2[bx],dx
+	mov	es:LDT_ROOTH[bx],dx
 if JOIN
 	mov	al,fdos_hds_drv		;  and the physical drive
 	mov	es:LDT_DRV[bx],al
@@ -280,7 +280,7 @@ rebuild_ldt_curdir40:
 	mov	ax,fdos_hds_blk
 	mov	dx,fdos_hds_blk+2
 	mov	es:LDT_BLK[bx],ax	; update our curdir block
-	mov	es:LDT_BLK+2[bx],dx
+	mov	es:LDT_BLKH[bx],dx
 if JOIN
 	mov	al,fdos_hds_drv		;  and the physical drive
 	mov	es:LDT_DRV[bx],al
@@ -398,13 +398,13 @@ else
 endif
 	cmp	ax,es:LDT_BLK[bx]	; do we need to do a rebuild
 	 jne	path_prep_curdir20	;  or can we trust the media ?
-	cmp	ax,es:LDT_BLK+2[bx]
+	cmp	ax,es:LDT_BLKH[bx]
 	 jne	path_prep_curdir20
 path_prep_curdir10:
 	call	rebuild_ldt_curdir	; better reselect current dir
 path_prep_curdir20:
 	mov	ax,es:LDT_BLK[bx]	; move to current directory block
-	mov	dx,es:LDT_BLK+2[bx]
+	mov	dx,es:LDT_BLKH[bx]
 	mov	fdos_hds_blk,ax
 	mov	fdos_hds_blk+2,dx
 path_prep_curdir30:
@@ -905,7 +905,7 @@ chkcds10:
 	 jne	chkcds10		; no, don't bother then
 	cmp	es:LDT_BLK[bx],0ffffh	; is it valid
 	 jne    chkcds19
-	cmp	es:LDT_BLK+2[bx],0ffffh
+	cmp	es:LDT_BLKH[bx],0ffffh
 	 jne    chkcds19
 	push	ax
 	push	cx
@@ -924,7 +924,7 @@ if 0
 	cmp	cx,es:LDT_ROOT[bx]	; is this our root block ?
 	 jne	chkcds19a
 	mov	cx,chkcds_cl+2
-	cmp	cx,es:LDT_ROOT+2[bx]
+	cmp	cx,es:LDT_ROOTH[bx]
 	 je	chkcds20		; (ie. a SUBST'd drive)
 chkcds19a:
 endif
@@ -932,7 +932,7 @@ endif
 	cmp	cx,es:LDT_BLK[bx]	; does the block match
 	 jne	chkcds10		; no, try next drive
 	mov	cx,chkcds_cl+2
-	cmp	cx,es:LDT_BLK+2[bx]
+	cmp	cx,es:LDT_BLKH[bx]
 	 jne	chkcds10
 chkcds20:
 	ret

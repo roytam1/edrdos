@@ -419,7 +419,7 @@ chdir30:
 	mov	cx,es:LDT_ROOTLEN[bx]	; root block and drive
 	mov	dx,es:LDT_ROOT[bx] 	; if it's a "SUBST I: C:\PATH" form
 	mov	chdir_cl,dx
-	mov	dx,es:LDT_ROOT+2[bx]
+	mov	dx,es:LDT_ROOTH[bx]
 	mov	chdir_cl+2,dx
 	mov	dx,es:word ptr LDT_NAME[bx]
 ;	mov	bx,es:LDT_ROOT[bx] 	; if it's a "SUBST I: C:\PATH" form
@@ -444,11 +444,11 @@ chdir50:
 	mov	bx,chdir_cl
 	mov	LDT_ROOT[di],bx		; root as above
 	mov	bx,chdir_cl+2
-	mov	LDT_ROOT+2[di],bx
+	mov	LDT_ROOTH[di],bx
 	mov	ax,fdos_hds_blk		; current block from HDS
 	mov	LDT_BLK[di],ax
 	mov	ax,fdos_hds_blk+2
-	mov	LDT_BLK+2[di],ax
+	mov	LDT_BLKH[di],ax
 	mov	al,fdos_hds_drv		; current drive we from HDS
 	mov	LDT_DRV[di],al
 	mov	ax,word ptr current_ddsc

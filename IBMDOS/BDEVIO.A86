@@ -1288,13 +1288,13 @@ if JOIN
 endif
 	cmp	es:LDT_BLK[bx],0FFFFh	; did we have a media change ?
 	 jne	select_logical_drv20	; then we'd better rebuild
-	cmp	es:LDT_BLK+2[bx],0FFFFh
+	cmp	es:LDT_BLKH[bx],0FFFFh
 	 jne	select_logical_drv20
 select_logical_drv10:
 	call	rebuild_ldt_root	;  the LDT_ root block
 select_logical_drv20:
 	mov	ax,es:LDT_ROOT[bx]	; get virtual root from LDT
-	mov	dx,es:LDT_ROOT+2[bx]
+	mov	dx,es:LDT_ROOTH[bx]
 	mov	fdos_hds_root,ax	; move there
 	mov	fdos_hds_root+2,dx
 	mov	fdos_hds_blk,ax
@@ -1614,7 +1614,7 @@ mlu10:
 	cmp	dl,es:LDT_DRV[bx]	; does the physical drive match ?
 	 jne	mlu20
 	mov	es:LDT_BLK[bx],0FFFFh	; indicate we shouldn't trust BLK
-	mov	es:LDT_BLK+2[bx],0FFFFh
+	mov	es:LDT_BLKH[bx],0FFFFh
 mlu20:
 	inc	ax			; onto next LDT
 	jmps	mlu10
