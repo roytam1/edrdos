@@ -416,13 +416,12 @@ batch_restart:
 		      strcat(envvar,"=");
 		      s=s1+1;
 		      strupr(envvar);
-		      if (!(env_scan(envvar,varbuf))) {
-			s1=varbuf;
-			while (*s1)
-			  *line++=*s1++;
-		      }
-		      else
-			break;
+		      if (env_scan(envvar,varbuf))
+			if (novell_extension(envvar,varbuf))
+			  break;
+		      s1=varbuf;
+		      while (*s1)
+			*line++=*s1++;
 		    }
 		  else {
 		    envvar[i++]=*s1++;

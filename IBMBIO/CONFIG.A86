@@ -1212,11 +1212,14 @@ build_cl1:
 	stosb
 	loop	build_cl1
 	mov	al,CR		; indicate we can go no more....
+	jmps	build_cl4
 build_cl2:
 	cmp	al,CR		; it it really the end ?
 	mov	al,' '		; now insert a space character
 	stosb
 	 je	build_cl_exit	; CR meant it's time to go
+	cmp	byte ptr -1[si],' '
+	 je	build_cl3
 	dec	si		; rewind the source one character	
 build_cl3:
 	lodsb			; Copy the tail

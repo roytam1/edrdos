@@ -438,6 +438,7 @@ BYTE *cmd;
 #else
 	BYTE	buf[MAX_ENVLEN], c;
 	UWORD	envsize = 256;
+	UWORD	oldenvsize = 0;
 #endif
 #if defined(DOSPLUS)
 	BOOLEAN	no_timedate = FALSE;
@@ -469,8 +470,9 @@ BYTE *cmd;
 	batchflg_off = (VOID *) &batchflg;
 	echoflg_off  = (VOID *) &echoflg;
 
-	envsize = get_original_envsize();	/* BAP - sets envsize to */
+	oldenvsize = get_original_envsize();	/* BAP - sets envsize to */
 						/* same as original COMMAND */
+	envsize=oldenvsize;
 	if ((envsize < 128) || (envsize > 32752)) envsize = 256; /* shouldn't really need this */
 
 	parent_psp = MK_FP(_psp2, 0x16);	/* our parental PSP is here  */
@@ -523,6 +525,7 @@ BYTE *cmd;
 
 	initflg = YES;				/* there's only one 1st time */
 	cflag = 0;				/* Clear the switch variable */
+	if (oldenvsize==0) cflag|=1;		/* Assume primary shell if no previous env */
 
 #if !defined(CDOSTMP)
 	/*

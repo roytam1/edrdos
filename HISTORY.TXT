@@ -62,6 +62,19 @@
 - fixed bugs in command.com to make comparisons in batch files with quoted
   strings work as expected
 - added support for environment variables on the command line
+(24.7.2004):
+- added support for internal variables on the command line
+- changed function 49h (Free Memory) to merge adjacent free blocks after
+  freeing a memory block
+- fixed function 7302h (Get Extended DPB) for FAT12/16 drives
+- fixed an overflow error that prevented DR-DOS from reading/writing files if
+  the seek position was larger than (partition_size modulo 4 GB)
+- made command.com stay resident even if not invoked with parameter /P when no
+  other primary shell is installed, removed default parameters A: /P
+- changed DEVICE command to not insert unnessary spaces into device driver's
+  command line
+- added new experimental config.sys command VERSION=x.x to allow to change the
+  global version setting
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

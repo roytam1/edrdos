@@ -17,5 +17,13 @@ FREED_NPCLUS	equ	dword ptr 20h	; number of physical allocation units
 ;FREED_RESERVED	equ	24h	; reserved bytes
 FREED_LEN	equ	24h	; length of data
 
+EDPB_DEVHEAD	equ	dword ptr 13h	; device driver header
 EDPB_DPBFLAGS	equ	byte ptr 18h	; DPB flags (undocumented)
+EDPB_LINK	equ	dword ptr 19h	; link to next DPB
+EDPB_FSINFO	equ	word ptr 25h	; file system info sector
+EDPB_BOOTBAK	equ	word ptr 27h	; backup of boot sector
+EDPB_BDATADDR	equ	dword ptr 29h	; sector address of cluster #2
+EDPB_BCLSTRS	equ	dword ptr 2dh	; highest cluster number
+EDPB_BFATRECS	equ	dword ptr 31h	; number of sectors per FAT
+EDPB_BBLOCK	equ	dword ptr 39h	; next block to allocate
 EDPB_LEN	equ	3dh		; length of Extended DPB structure

@@ -2271,7 +2271,29 @@ func_getkey:				; GETKEY
 func_getkey10:
 	mov	error_level,ax
 	ret
-	
+
+func_version:				; VERSION=x.xx
+	xor	dx,dx
+	call	atoi			; get major version number
+	 jc	func_version20		; no numerical value
+	cmp	ax,0
+	 jz	func_version20
+	mov	dl,al
+	call	dot			; check for '.'
+	 jc	func_version10
+	call	atoi			; get minor version number
+	 jc	func_version20
+	mov	dh,al
+func_version10:
+	push	es
+	push	bx
+	mov	es,dos_dseg
+	mov	bx,0d12h		; use as new DOS version
+	mov	es:[bx],dx
+	pop	bx
+	pop	es
+func_version20:
+	ret
 	
 ;	CONFIG_ERROR is the global error handler for the CONFIG.SYS
 ;	commands. It is called with SI pointing to the CR/LF terminated string
@@ -2440,6 +2462,23 @@ separator20:
 	clc					; not end of line
 	ret
 
+dot:
+;---------
+; On Entry:
+;	DS:SI -> string
+; On Exit:
+;	DS:SI -> next option
+;	CY set if end of line
+;
+; Strips off all whitespace, and the optional '.'
+; CY set at end of line
+	call	whitespace			; deblank string and
+	lodsb					;  check for '.' separator
+	cmp	al,'.'				;  discarding if found
+	 je	dot10
+	stc					; else set carry
+dot10:
+	ret
 
 strupr:
 ;------
@@ -3330,7 +3369,7 @@ endif
 
 	extrn	dbcs_tbl:dword
 	extrn	ctry_info:byte
-
+	extrn	dos_dseg:word
 
 
 	Public	cfg_file, cfg_file_end
@@ -3521,6 +3560,7 @@ endif
 	dw	cmd_yeschar,	func_yeschar,	0	; YESCHAR=
 	dw	cmd_deblock,	func_deblock,	0	; DEBLOCK=xxxx
 	dw	cmd_numlock,	func_numlock,	0	; NUMLOCK=ON/OFF
+	dw	cmd_version,	func_version,	0	; VERSION=x.xx
 	dw	cmd_common,	func_common,	0	; [COMMON]
  	dw	0				; end of table
 
@@ -3572,6 +3612,7 @@ cmd_getkey	db	'GETKEY',0
 cmd_yeschar	db	'YESCHAR',0
 cmd_deblock	db	'DEBLOCK',0
 cmd_numlock	db	'NUMLOCK',0
+cmd_version	db	'VERSION',0
 cmd_common	db	'[COMMON]',0
 
 cmd_on		db	'ON',0

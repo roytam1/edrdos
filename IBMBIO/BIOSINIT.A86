@@ -1777,8 +1777,10 @@ exec_fcb2seg	dw	0		; FCB 2 Offset and Segment
 		rd	1		; CS:IP
 
 	Public	shell_cline
+;shell_cline	db	length shell_drv; Initial Command Line
+;shell_drv	db	'A: /P'
 shell_cline	db	length shell_drv; Initial Command Line
-shell_drv	db	'A: /P'
+shell_drv	rb	0
 		db	0Dh
 		rb	126 - length shell_drv
 

@@ -530,9 +530,11 @@ fdrw_p20:
 	call	mul32			; compute maximum size of disk
 	pop	ax
 	pop	dx
-	add	sp,12			; clean up the stack again
+	pop	cx
+	add	sp,10			; clean up the stack again
 	sub	ax,byteoff
 	sbb	dx,byteoff+WORD		; beyond this we can't go
+	sbb	cx,0
 	 jc	fdrw_p30
 ;	mov	ax,byteoff		; DX:AX = current file size
 ;	mov	dx,byteoff+WORD

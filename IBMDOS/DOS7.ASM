@@ -17,16 +17,19 @@ PCM_CODE	cseg	byte
 	extrn	mul32:near
 	extrn	return_AX_CLC:near
 	extrn	error_exit:near
+	extrn	get_dseg:near
 
 	public	func73
 func73:
 	cmp	al,2			; function 7302h?
 	 je	func7302		; yes
 	cmp	al,3			; function 7303h?
-	 je	func7303		; yes
+	 jne	f73_10
+	jmp	func7303		; yes
+f73_10:
 	cmp	al,5			; function 7305h?
-	 jne	func73_error		; no
-	jmp	func7305
+	 jne	func73_error
+	jmp	func7305		; yes
 func73_error:
 	mov	ax,7300h		; function not supported
 	clc
@@ -62,6 +65,7 @@ f7302_20:
 	push	ds
 	lds	bp,int21regs_ptr	; DS:DI -> Extended DPB structure
 	mov	di,ds:reg_DI[bp]
+	mov	si,ds:reg_SI[bp]	; SI = signature
 	mov	ds,ds:reg_ES[bp]
 	mov	word ptr [di],EDPB_LEN	; length of data
 	inc	di			; skip to begin of EDPB
@@ -70,22 +74,51 @@ f7302_20:
 	push	es
 	pop	ds
 	pop	es			; ES:DI -> EDPB, DS:BX -> DDSC
+	push	si
 	push	di
 	mov	si,bx			; copy standard DPB from DDSC
-	mov	cx,DDSC_FREE
+	mov	cx,DDSC_BFREE
 	rep	movsb
 	pop	di
+	pop	si
 	xor	dh,dh
-	mov	es:EDPB_DPBFLAGS[bx],dh	; clear DBP flags
-	lea	si,ds:DDSC_BFREE[bx]	; copy remaining EDPB portion from DDSC
-	add	di,DDSC_FREE
+	mov	es:EDPB_DPBFLAGS[di],dh	; clear DBP flags
+	cmp	si,0f1a6h		; check signature
+	 je	f7302_25
+	xor	ax,ax			; wrong signature, clear driver header and link address fields
+	dec	ax
+	mov	es:word ptr EDPB_DEVHEAD[di],ax
+	mov	es:word ptr EDPB_DEVHEAD+2[di],ax
+	mov	es:word ptr EDPB_LINK[di],ax
+	mov	es:word ptr EDPB_LINK+2[di],ax
+f7302_25:
+	lea	si,ds:DDSC_BFREE[bx]
 	mov	cx,DDSC_FSVER-DDSC_BFREE
-	rep	movsb
+	cmp	ds:DDSC_DIRENT[bx],0	; is this a FAT32 drive?
+	 jnz	f7302_30		; no, then build the remaining portion from scratch
+	add	di,DDSC_FREE
+	rep	movsb			; else copy remaining EDPB portion from DDSC
+	jmps	f7302_40
+f7302_30:
+	push	di
+	add	di,DDSC_FREE
+	xor	al,al			; zero contents of remaining EDPB part
+	rep	stosb
+	pop	di
+	xor	ax,ax			; AX=FFFFh
+	dec	ax
+	mov	es:EDPB_FSINFO[di],ax	; then fill in the 16-bit values
+	mov	es:EDPB_BOOTBAK[di],ax
+	mov	ax,word ptr DDSC_DATADDR[bx]
+	mov	es:word ptr EDPB_BDATADDR[di],ax
+	mov	ax,word ptr DDSC_NCLSTRS[bx]
+	mov	es:word ptr EDPB_BCLSTRS[di],ax
+	mov	ax,word ptr DDSC_NFATRECS[bx]
+	mov	es:word ptr EDPB_BFATRECS[di],ax
+	mov	ax,word ptr DDSC_BLOCK[bx]
+	mov	es:word ptr EDPB_BBLOCK[di],ax
+f7302_40:
 	pop	ds
-;	push	ds
-;	lds	bp,int21regs_ptr
-;	mov	ds:reg_AX[bp],ax	; return AX
-;	pop	ds
 	xor	ax,ax
 	call	return_AX_CLC
 	clc
@@ -200,10 +233,6 @@ f7303_50:
 	mov	word ptr FREED_NSECS+2[di],ax
 	add	sp,12			; clean up the stack again
 	pop	ds
-;	push	ds
-;	lds	bp,int21regs_ptr
-;	mov	ds:reg_AX[bp],ax	; return AX
-;	pop	ds
 	xor	ax,ax
 	call	return_AX_CLC
 	clc
