@@ -10,6 +10,13 @@
   Extended Free Disk Space)
 - changed dir command to use the new free disk space routine when it is
   available and kilobytes instead of bytes for large numbers
+- fixed some small Watcom C/C++ 11.0c compilation problems
+- fixed bugs in disk device driver that caused Get/Set Media routines to not
+  read/write the serial number and label correctly on FAT16 and LBA drives
+- fixed bug in Find First/Next Matching File functions that caused volume
+  labels not to be found when other attributes were also given
+- fixed bug in SynchroniseBuffers routine that sometimes caused data
+  inconsistensies between buffers and disk
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

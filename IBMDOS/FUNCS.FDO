@@ -1638,7 +1638,9 @@ search_next_err:
 	jmp	fdos_ED_ROOM		; else end of directory
 
 search_n10:
+	mov	finddfcb_mask,0		; find everything, including labels
 	call	finddfcb		; find next matching entry
+	mov	finddfcb_mask,DA_VOLUME*256	; restore mask
 	 jz	search_next_err		; if not found
 	mov	al,attributes		; get attributes that we support
 if PASSWORD

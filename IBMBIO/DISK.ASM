@@ -2024,6 +2024,8 @@ rw_media:
 	xchg	ax,cx			; CX = sectors per cylinder
 	mov	ax,es:word ptr (UDSC_BPB+BPB_HIDDEN)[di]
 	mov	dx,es:word ptr (UDSC_BPB+BPB_HIDDEN+2)[di]
+	mov	word ptr P_LBABLOCK[bp],ax	; Logical Block Address of start sector
+	mov	word ptr P_LBABLOCK+2[bp],dx
 	div	cx			; AX = cylinder #, DX = head/sec offset
 	mov	P_CYL[bp],ax		; save physical cylinder number
 	xor	ax,ax			; make remainder 32 bit so
@@ -2035,7 +2037,13 @@ rw_media:
 	 jc	rw_media20
 	cmp	local_buffer+11+BPB_FATID,0F0h
 	 jb	rw_media10
-	mov	si,offset CGROUP:local_buffer+UDSC_BPB_LENGTH+11+2
+	cmp	word ptr local_buffer+11+BPB_DIRMAX,0	; FAT32 drive?
+	 jne	rw_media05		; no
+	mov	si,offset CGROUP:local_buffer+UDSC_BPB_LENGTH+11+14
+	jmps	rw_media07
+rw_media05:
+	mov	si,offset CGROUP:local_buffer+OLD_UDSC_BPB_LENGTH+11+2
+rw_media07:
 	lodsb				; get extended boot
 	sub	al,29h			; do we have an extended boot ?
 	 je	rw_media20		; no, well we can't write a new one

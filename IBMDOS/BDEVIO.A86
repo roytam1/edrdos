@@ -1062,20 +1062,20 @@ SynchroniseBuffers:	; synchronize BCBs after multi sector transfer
 ;	mov	ah,byte ptr fdrwsec+WORD
 	mov	ax,word ptr fdrwsec+2
 ;	mov	al,adrive		; get our drive number
+	mov	cl,adrive		; get our drive number
 	lds	bx,bcb_root		; DS:BX -> 1st buffer
 SynchroniseBuffers10:
 	test	ds:BCB_FLAGS[bx],BF_ISDAT; is this a data buffer?
 	 jz	SynchroniseBuffers30	; skip if directory or FAT
 ;	cmp	al,ds:BCB_DRV[bx]	; does the drive match?
-	mov	cl,adrive		; get our drive number
 	cmp	cl,ds:BCB_DRV[bx]	; does the drive match?
 	 jne	SynchroniseBuffers30	; skip if different
 	mov	si,ds:BCB_REC[bx]	; compute bcb->rec - prec
-	sub	si,dx			; result in SI,CL (lsb..msb)
+	sub	si,dx			; result in SI,DI (lsb..msb)
 ;	mov	cl,ds:byte ptr BCB_REC2[bx]
 ;	sbb	cl,ah			; get bits 16-23 of result
-	mov	cx,ds:BCB_REC2[bx]
-	sbb	cx,ax			; get bits 16-31 of result
+	mov	di,ds:BCB_REC2[bx]
+	sbb	di,ax			; get bits 16-31 of result
 	 jne	SynchroniseBuffers30	; skip if bcb->rec < prec
 	cmp	si,ss:fdrwdircnt	; else check against transfer length
 	 jae	SynchroniseBuffers30	; skip if beyond transfer length
@@ -1089,6 +1089,7 @@ SynchroniseBuffers10:
 	push	ax ! push dx		; save record address
 
 	mov	ax,ss:psecsiz		; # of bytes in sector buffer
+	push	cx			; save drive number
 	mov	cx,ax
 	shr	cx,1			; CX = words per sector
 	mul	si			; AX = byte offset from start buffer
@@ -1097,6 +1098,7 @@ SynchroniseBuffers10:
 	mov	es,ss:fdrwseg		; ES:DI -> data to be replaced
 	lea	si,BCB_DATA[bx]
 	rep	movsw			; move CX words (one physical sector)
+	pop	cx			; restore drive number
 	pop	dx ! pop ax		; restore record address
 	jmps	SynchroniseBuffers30
 
