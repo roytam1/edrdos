@@ -1598,6 +1598,24 @@ func_ddscs20:
 func_ddscs30:
 	ret
 
+func_xbda:		; XBDA=LOW,UMB
+	call	separator
+	mov	di,offset low_opt
+	call	compare
+	 jc	func_xbda10
+	or	hixbda,MOVE_XBDA_LOW
+	jmps	func_xbda
+func_xbda10:
+	call	separator
+	mov	di,offset umb_opt
+	call	compare
+	 jc	func_xbda20
+	or	hixbda,MOVE_XBDA_HIGH
+	jmps	func_xbda
+func_xbda20:
+	ret
+
+
 func_dos:		; DOS=HIGH - relocate BIOS/BDOS/Buffer etc to FFFF
 	call	separator		; Deblank Command
 	mov	di,offset high_opt	; es:di -> "HIGH"
@@ -3400,6 +3418,7 @@ endif
 	extrn	lastdrvIn:byte
 	extrn	hidosdata:byte
 	extrn	hiddscs:byte
+	extrn	hixbda:byte
 
 if not ADDDRV
 	extrn	hidos:byte
@@ -3576,6 +3595,7 @@ if not ADDDRV
 	dw	cmd_hidos,	func_hidos,	0	; HIDOS=ON/OFF
 	dw	cmd_dosdata,	func_dosdata,	0	; DOSDATA=UMB
 	dw	cmd_ddscs,	func_ddscs,	0	; DDSCS=HIGH,UMB
+	dw	cmd_xbda,	func_xbda,	0	; XBDA=LOW,UMB
 	dw	cmd_dos,	func_dos,	0	; DOS=HIGH
 	dw	cmd_set,	func_set,	CF_LC	; SET envar=string
 	dw	cmd_switches,	func_switches,	CF_NOF	; SWITCHES=...
@@ -3630,6 +3650,7 @@ cmd_installhigh	db	'INSTALLHIGH', 0
 cmd_hidos	db	'HIDOS',0
 cmd_dosdata	db	'DOSDATA',0
 cmd_ddscs	db	'DDSCS',0
+cmd_xbda	db	'XBDA',0
 cmd_dos		db	'DOS',0
 cmd_set		db	'SET',0
 cmd_switches	db	'SWITCHES',0

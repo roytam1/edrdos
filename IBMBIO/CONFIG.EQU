@@ -131,6 +131,9 @@ DOSDATA_IN_UMB	equ	0000$0010b
 ALLOC_IN_HMA	equ	0000$0001b
 ALLOC_IN_UMB	equ	0000$0010b
 
+MOVE_XBDA_LOW	equ	0000$0001b
+MOVE_XBDA_HIGH	equ	0000$0010b
+
 DMD_ID          equ     es:byte ptr .0	; id code ('M' or 'Z')
 DMD_PSP         equ     es:word ptr .1	; owner of memory block
 DMD_LEN         equ     es:word ptr .3	; length of memory block

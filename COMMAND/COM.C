@@ -1212,10 +1212,10 @@ BOOLEAN   internal;		/* Search for INTERNAL Commands */
 	REG S_CMD FAR *s_cmd_p;
 	WORD	  i;
 	BYTE FAR  *cpf;
-	static BYTE	loadfile[MAX_FILELEN];
+EXTERN	BYTE	  loadfile[MAX_FILELEN];
 	BYTE	  *cp1, *lcp;
 	UWORD	  loadtype;
-	static BYTE	argv0[MAX_FILELEN];
+EXTERN	BYTE	  argv0[MAX_FILELEN];
 
 	heap_get(0);				/* check for stack overflow */
 	lcp = cp;				/* in case 1st parse fails.. */
@@ -1512,7 +1512,7 @@ UWORD	*loadtype;		/* Command file Type			*/
 	    if((strlen(sppath) == 2) && (sppath[1] == ':'))
 		sppath[0] = '\0';
 
-	} while(!*sppath && *path);
+	} while(!*sppath && (*path || *envpath));
 
 	return i;
 }

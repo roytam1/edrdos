@@ -399,13 +399,13 @@ dos_r50:
 	mov	ds,dos_dseg		; DS -> DOS data segment
 	callf	cs:dos_init
 
-	mov	es,cs:dos_dseg
-	mov	bx,26h			; ES:BX -> list of lists
-	mov	ax,es:word ptr F52_FCBPTR[bx]
-    shr ax,1 ! shr ax,1     
-    shr ax,1 ! shr ax,1     
-	and	es:word ptr F52_FCBPTR[bx],15
-	add	es:word ptr F52_FCBPTR+2[bx],ax
+;	mov	es,cs:dos_dseg
+;	mov	bx,26h			; ES:BX -> list of lists
+;	mov	ax,es:word ptr F52_FCBPTR[bx]
+;    shr ax,1 ! shr ax,1     
+;    shr ax,1 ! shr ax,1     
+;	and	es:word ptr F52_FCBPTR[bx],15
+;	add	es:word ptr F52_FCBPTR+2[bx],ax
 	sti
 	push cs ! pop ds
 	mov	es,current_dos		; internationalise the yes/no chars
@@ -722,6 +722,7 @@ relocate_system10:
 	call	reloc_bios		; move down relocatable drivers
 	call	reloc_dos		; move DOS above drivers if RAM based
 	call	reloc_dosdata
+	call	reloc_xbda
 	xor	cx,cx
 	xchg	cx,commandHMA
 	call	FreeHMA			; return command.com HMA space to pool
@@ -741,12 +742,13 @@ reloc_dos:				; move DOS down to just above drivers
 	test	init_flags,INIT_ROMCODE	; Run the DOS code in ROM
 	 jz $+5 ! jmp reloc_dos90	; at CURRENT_DOS - No Code Reloc
 	mov	es,current_dos
+	mov	dx,es:DOS_OFFSET
 	mov	cx,es:DOS_CODE		; get DOS code size in bytes
 	mov	ax,dos_target_seg	; get DOS target
 	cmp	ax,0FFFFh		; it it seg FFFF ?
 	 jne	reloc_dos10
-	mov	es,current_dos
-	mov	dx,es:DOS_OFFSET
+;	mov	es,current_dos
+;	mov	dx,es:DOS_OFFSET
 	call	AllocHMA		; allocate CX bytes, offset < DX
 	 jnc	reloc_dos50		;  if we can use high memory
 	xor	ax,ax			; can't, so try auto-allocation
@@ -804,20 +806,20 @@ reloc_dos90:				; fixups performed
 	ret
 
 reloc_dosdata:
-	push	es
+	push	es			; save ES
 
-	mov	ax,DDSC_LEN
-	mul	res_dev_count
+	mov	ax,DDSC_LEN		;length of DDSC structure
+	mul	res_dev_count		; * number of resident devices
 	push	ax
-	test	hiddscs,DDSCS_IN_HMA
-	 jz	reloc_data20
+	test	hiddscs,DDSCS_IN_HMA	; is HMA usage enabled?
+	 jz	reloc_data20		; no, skip it
 	push	es
 	push	ax
-	call	SetupHMA
+	call	SetupHMA		; prepare HMA
 	pop	cx
 	mov	dx,0ffffh
-	call	AllocHMA
-	 jc	reloc_data10
+	call	AllocHMA		; and try to allocate CX bytes there
+	 jc	reloc_data10		; did not work, try other mem instead
 	mov	ax,es
 	pop	es
 	jmps	reloc_data50
@@ -826,55 +828,65 @@ reloc_data10:
 reloc_data20:
 	pop	ax
 	push	ax
-	mov	cl,4
-	add	ax,15
+	mov	cl,4			; convert bytes to paragraphs
+	add	ax,15			; and round it
 	shr	ax,cl
-	mov	dl,'M'
-	test	hiddscs,DDSCS_IN_UMB
-	 jz	reloc_data30
-	call	alloc_hiseg
-	 jnc	reloc_data40
+	mov	dl,'M'			; MCB type
+	test	hiddscs,DDSCS_IN_UMB	; is upper mem usage enabled
+	 jz	reloc_data30		; no, try low mem instead
+	call	alloc_hiseg		; try to allocate upper mem
+	 jnc	reloc_data40		; if it did not work, try low
 reloc_data30:
-	call	alloc_seg
+	call	alloc_seg		; allocate low mem
 reloc_data40:
 	xor	di,di
 reloc_data50:
-	mov	es,ax
+	mov	es,ax			; mem position is at ES:DI
 	pop	cx
 	mov	dx,di
 	push	ds
-	lds	si,res_ddsc_ptr
+	lds	si,res_ddsc_ptr		; copy DDSCs there
 	rep	movsb
 	pop	ds
 	mov	di,dx
-;	xor	di,di
 	mov	cl,res_dev_count
-	dec	cl
-reloc_data60:
+	push	ds
+	push	es
+	les	bx,func52_ptr
+	lds	si,es:F52_PATHPTR[bx]
+	pop	es
+reloc_data60:				; fix up new DDSC addresses in LDTs
+	mov	ds:word ptr LDT_PDT[si],di
+	mov	ds:word ptr LDT_PDT+2[si],ax
+	cmp	cl,1			; and in DDSCs
+	 je	reloc_data65		; skip last one
 	mov	es:word ptr DDSC_LINK[di],di
 	add	es:word ptr DDSC_LINK[di],DDSC_LEN
 	mov	es:word ptr DDSC_LINK+2[di],ax
-	add	di,DDSC_LEN
+reloc_data65:
+	add	di,DDSC_LEN		; next DDSC
+	add	si,LDT_LEN		; next LDT
 	loop	reloc_data60
-	mov	res_ddsc_seg,ax
+	pop	ds
+	mov	res_ddsc_seg,ax		; fix up pointers in DOS data segment
 	mov	res_ddsc_off,dx
 	les	bx,func52_ptr
 	mov	es:word ptr F52_DDSCPTR+2[bx],ax
 	mov	es:word ptr F52_DDSCPTR[bx],dx
 
-	mov	ax,dosdata_len
-	mov	cl,4
+	mov	ax,dosdata_len		; length of DOS data segment
+	mov	cl,4			; convert this to paragraphs
 	add	ax,15
 	shr	ax,cl
-	mov	dl,'M'
-	test	hidosdata,DOSDATA_IN_UMB
-	 jz	reloc_data70
-	call	alloc_hiseg
-	 jnc	reloc_data80
+	mov	dl,'M'			; MCB type
+	test	hidosdata,DOSDATA_IN_UMB ; shall the DOS data go high?
+	 jz	reloc_data70		; no, then try low mem instead
+	call	alloc_hiseg		; try to allocate upper mem
+	 jnc	reloc_data80		; did not work, try low instead
 reloc_data70:
-	call	alloc_seg
+	call	alloc_seg		; allocate low
 reloc_data80:
-	mov	cx,dosdata_len
+	mov	cx,dosdata_len		; copy the DOS data segment to new location
 	mov	es,ax
 	xor	di,di
 	xor	si,si
@@ -882,13 +894,122 @@ reloc_data80:
 	mov	ds,dos_dseg
 	rep	movsb
 	pop	ds
-	mov	dos_dseg,ax
+	mov	dos_dseg,ax		; and fix up the pointers
 	mov	drdos_seg,ax
+	mov	func52_seg,ax
 	xor	di,di
 	mov	es,di
 	mov	es:INT31_SEGMENT,ax
 
-	pop	es
+	pop	es			; restore ES again
+	ret
+
+reloc_xbda:
+	cmp	hixbda,0		; shall the XBDA be moved?
+	 jne	reloc_xbda02		; yes
+	jmp	reloc_xbda140		; no, nothing to do
+reloc_xbda02:
+	push	es			; save ES
+	mov	ax,40h			; address of BIOS data area
+	mov	es,ax
+	mov	bx,0
+	mov	ax,es:0eh[bx]		; segment address of XBDA if one exists
+	cmp	ax,mem_size		; is it at the top of conventional mem?
+	 je	reloc_xbda03		; yes, go on
+	jmp	reloc_xbda130		; no, then moving it is no good
+reloc_xbda03:
+	mov	es,ax			; ES = XBDA segment
+	xor	ah,ah
+	mov	al,es:[bx]		; length of XBDA in kilobytes
+	mov	cl,6			; make this paragraphs
+	shl	ax,cl
+	mov	cx,ax
+	mov	dx,es
+	add	ax,dx			; end of XBDA
+	cmp	ax,0a000h		; is it just before the video RAM?
+	 je	reloc_xbda05		; yes, that is just what we want
+	jmp	reloc_xbda130		; if not, do not move it
+reloc_xbda05:
+	mov	dl,'M'			; MCB type
+	mov	ax,cx
+	test	hixbda,MOVE_XBDA_HIGH	; shall we try to move it to upper mem?
+	 jz	reloc_xbda10		; no
+	call	alloc_upper		; try to allocate in upper mem
+	 jnc	reloc_xbda20		; did not work, try low instead
+reloc_xbda10:
+	test	hixbda,MOVE_XBDA_LOW	; shall we move it to low base mem?
+	 jnz	reloc_xbda15		; yes
+	jmp	reloc_xbda130		; no, then just leave it where it is
+reloc_xbda15:
+	call	alloc_seg		; allocate low mem
+reloc_xbda20:
+	xor	bx,bx
+	xchg	ax,dx
+	xor	ah,ah
+	mov	al,es:[bx]		; length of XBDA in kilobytes
+	mov	cl,10			; make this bytes instead
+	shl	ax,cl
+	xchg	ax,cx
+	push	ds
+	push	es			; copy it to new position
+	pop	ds
+	mov	es,dx
+	xor	di,di
+	xor	si,si
+	rep	movsb
+	mov	ax,40h			; and update the BIOS data area with the new address
+	mov	ds,ax
+	mov	ds:0eh[bx],es
+	pop	ds
+	les	bx,func52_ptr		; now get the start of the MCB chain
+	mov	es,es:F52_DMDROOT[bx]
+	mov	si,mem_size
+	dec	si
+reloc_xbda30:
+	mov	ax,es
+	mov	di,ax
+	add	ax,es:DMD_LEN		; and check them to find the right one
+	inc	ax
+	cmp	di,si			; is this the one that includes the old XBDA?
+	 je	reloc_xbda40		; yes
+	cmp	ax,si			; already past the right position?
+	 ja	reloc_xbda130		; that cannot be helped
+	mov	es,ax			; get the address of the next MCB
+	cmp	es:DMD_ID,IDZ		; already the last one?
+	 jne	reloc_xbda30		; no, try again
+	jmps	reloc_xbda130		; did not find it
+reloc_xbda40:
+	push	ax			; save length of old MCB
+	push	es:DMD_PSP		; and the old PSP pointer
+	mov	ch,es:DMD_ID		; and also its ID code
+	mov	ax,09fffh		; compute the new length
+	sub	ax,di
+	dec	ax
+	mov	es:DMD_LEN,ax		; and update the MCB accordingly
+	mov	es:DMD_PSP,0		; make this free mem
+	mov	es:word ptr DMD_NAME,'S'+256*'D'
+	mov	es:DMD_NAME+2,0
+	mov	es:DMD_ID,IDM		; there surely follows another one
+	mov	ax,09fffh		; this is where the system area starts now
+	mov	es,ax
+	mov	es:DMD_ID,ch		; use these values from the old MCB
+	pop	es:DMD_PSP
+	pop	ax
+	sub	ax,9fffh
+	dec	ax
+	mov	es:DMD_LEN,ax		; and this is the new length
+	les	bx,func52_ptr		; update the upper memory chain
+	mov	es:F52_DMD_UPPER[bx],9fffh
+	les	bx,drdos_ptr
+	mov	es:DRDOS_DMD_UPPER[bx],9fffh
+	mov	mem_size,0a000h		; and the base mem top
+	mov	ax,40h			; also update the new base mem size
+	mov	es,ax			; in the BIOS data area
+	mov	bx,13h
+	mov	es:[bx],640
+reloc_xbda130:
+	pop	es			; restore ES again
+reloc_xbda140:
 	ret
 
 	Public	HookInt2F
@@ -1881,6 +2002,8 @@ himem_size	dw	0		; length of HIMEM seg allocations
 hidosdata	db	0
 	Public	hiddscs
 hiddscs		db	0
+	Public	hixbda
+hixbda		db	0
 
 	Public	last_drv
 

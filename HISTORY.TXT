@@ -89,6 +89,24 @@
 - added new code to also allow the DOS data segment to be relocated to upper
   memory, added new config.sys command DOSDATA=UMB to activate this (default is
   DOSDATA=LOW)
+(29.9.2004):
+- added code to fix up the pointers to the DDSCs in the LDTs to fix XMSDSK
+  loading problems
+- fixed bug that caused internal pointer to function 52h data area (List of
+  Lists) to still point at temporary segment after DOS data relocation
+- added new code to allow the Extended BIOS Data Area to be relocated to low or
+  upper memory if for some reason the memory manager fails to do this, added
+  new config.sys command XBDA=LOW,UMB
+- fixed a bug in the FAT32 FSInfo block handling routines that manifested after
+  the DDSC relocation feature had been introduced
+- changed allocation of HIFILES to be compatible with Windows 3.x
+- fixed bug that caused FCB pointer to point to wrong address in the DOS data
+  segment after relocation
+- fixed age-old bug that caused wrong value to be used for code segment padding
+  which made DR-DOS hang during boot when loaded low on some machines
+- made command.com ignore leading semicolons in %PATH% environment variable
+- changed location of static arrays in command.com to another segment to work
+  around what seems to be a bug in TaskMgr
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

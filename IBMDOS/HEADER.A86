@@ -1520,6 +1520,11 @@ pcmode_init2:
 	mov	ds:word ptr buf_ptr+2,ds
 	mov	ds:word ptr file_ptr+2,ds
 	mov	ds:word ptr fcb_ptr+2,ds
+	mov	ax,word ptr fcb_ptr
+	mov	cl,4
+	shr	ax,cl
+	and	word ptr fcb_ptr,15
+	add	word ptr fcb_ptr+2,ax
 ;	push	ax			; Save the memory size
 ;	push	bx			; First Free Paragraph
 ;	mov	ds:current_dsk,dl	; save initial drive

@@ -907,6 +907,19 @@ cfg_fin20:
 	movsw				; set offset of console device driver
 	movsw				; set segment of console device driver
 
+	push	num_files
+	push	num_fcbs
+	mov	al,filesIn
+	push	ax
+	mov	num_fcbs,MIN_NUM_FCBS
+	mov	num_files,MIN_NUM_FILES
+	mov	filesIn,0
+	call	setup_doshndl
+	pop	ax
+	mov	filesIn,al
+	pop	num_fcbs
+	pop	num_files
+
 	call	setup_doshndl		; Allocate DOS compatible Handles
 					; NB must immediately follow devices !
 	call	setup_buffers		; allocate the requested #

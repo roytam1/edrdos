@@ -223,6 +223,7 @@ include mserror.equ
 include char.def
 .list
 
+MAX_FILELEN	equ	140
 
 ; This is the offset in segment FFFF to which we will relocate.
 ; It is set to E0 to allow for a PCNFS bug
@@ -401,6 +402,10 @@ STACK		ENDS
 ED_TEXT		SEGMENT para public 'CDATA'
 	Public	ed_text_start
 ed_text_start	label byte
+	Public	_loadfile
+_loadfile	db	MAX_FILELEN dup(?)
+	Public	_argv0
+_argv0		db	MAX_FILELEN dup(?)
 ED_TEXT		ENDS
 DYNAMIC		SEGMENT para public 'DDATA'
 DYNAMIC		ENDS
