@@ -589,16 +589,20 @@ allocate_cluster:
 	 jnz	alloc_cl10		; skip if it is
 	test	dx,dx
 	 jnz	alloc_cl10
-	push	ds
-	lds	bx,ss:current_ddsc
-	mov	ax,ds:DDSC_BLOCK[bx]	; else continue from last allocated block
+;	push	ds
+;	lds	bx,ss:current_ddsc
+;	mov	ax,ds:DDSC_BLOCK[bx]	; else continue from last allocated block
+	push	es
+	les	bx,ss:current_ddsc
+	mov	ax,es:DDSC_BLOCK[bx]	; else continue from last allocated block
 	xor	dx,dx
 	cmp	dosfat,FAT32		; FAT32 drive?
 	 jne	alloc_cl05		; no, then skip
-	mov	ax,ds:word ptr DDSC_BBLOCK[bx]	; else continue from last allocated block
-	mov	dx,ds:word ptr DDSC_BBLOCK+2[bx]
+	mov	ax,es:word ptr DDSC_BBLOCK[bx]	; else continue from last allocated block
+	mov	dx,es:word ptr DDSC_BBLOCK+2[bx]
 alloc_cl05:
-	pop	ds
+;	pop	ds
+	pop	es
 alloc_cl10:
 	mov	bx,lastcl		; highest block number on current disk
 ;	cmp	ax,bx			; is it within disk size?
@@ -644,27 +648,35 @@ alloc_cl35:
 	mov	bx,alloc_clus_cl
 	test	bx,bx
 	 jnz	alloc_cl20
-	push	ds
-	lds	bx,ss:current_ddsc
-	mov	ds:DDSC_FREE[bx],ax	; we definitely have none left
+;	push	ds
+;	lds	bx,ss:current_ddsc
+;	mov	ds:DDSC_FREE[bx],ax	; we definitely have none left
+	push	es
+	les	bx,ss:current_ddsc
+	mov	es:DDSC_FREE[bx],ax	; we definitely have none left
 	cmp	dosfat,FAT32		; FAT32 drive?
 	 jne	alloc_cl36		; no, then skip
-	mov	ds:word ptr DDSC_BFREE[bx],ax	; we definitely have none left
-	mov	ds:word ptr DDSC_BFREE+2[bx],dx
+	mov	es:word ptr DDSC_BFREE[bx],ax	; we definitely have none left
+	mov	es:word ptr DDSC_BFREE+2[bx],dx
 alloc_cl36:
-	pop	ds
+;	pop	ds
+	pop	es
 	ret				; return (0);
 
 alloc_cl50:
-	push	ds			; block # AX is available
-	lds	bx,ss:current_ddsc
-	mov	ds:DDSC_BLOCK[bx],ax	; remember for next time
+;	push	ds			; block # AX is available
+;	lds	bx,ss:current_ddsc
+;	mov	ds:DDSC_BLOCK[bx],ax	; remember for next time
+	push	es			; block # AX is available
+	les	bx,ss:current_ddsc
+	mov	es:DDSC_BLOCK[bx],ax	; remember for next time
 	cmp	dosfat,FAT32		; FAT32 drive?
 	 jne	alloc_cl52		; no, then skip
-	mov	ds:word ptr DDSC_BBLOCK[bx],ax	; remember for next time
-	mov	ds:word ptr DDSC_BBLOCK+2[bx],dx
+	mov	es:word ptr DDSC_BBLOCK[bx],ax	; remember for next time
+	mov	es:word ptr DDSC_BBLOCK+2[bx],dx
 alloc_cl52:
-	pop	ds
+;	pop	ds
+	pop	es
 
 	push	dx
 	push	ax

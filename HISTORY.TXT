@@ -18,10 +18,13 @@
   master PSP, leading to all kinds of problems with the environment space
 - fixed bug in dir command that caused the free disk space on partitions with
   64 KB clusters to be displayed as zero
+- fixed bug in the memory allocation routine that would cause the install
+  command to crash sometimes when upper memory was present
 - fixed bug in LBA routines that caused writing problems on some systems, this
   may also speed up writing on other systems
 - increased heap space in command.com to prevent corruption of command line
   arguments while processing deeply nested batch files
+- fixed bug that sometimes caused XMSDSK to corrupt the last memory block
 
 7.01.05:
 - some preliminary changes for 32-bit file system support
