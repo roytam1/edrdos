@@ -495,6 +495,7 @@ f36_OK50:
 f36_exit:
 	jmp	return_AX_CLC
 
+	public	fdos_DISKINFO
 fdos_DISKINFO:
 ;-------------
 ; Called by func1B, func1C, func1F, func32, func36
@@ -503,8 +504,13 @@ fdos_DISKINFO:
 ; 
 	mov	ax,FD_DISKINFO		; get information about drive
 	xchg	ax,FD_FUNC		; while getting orginal function #
-	test	al,1			; is it func1B/func1F ?
-	 jz	fdos_DI10		; if so these use the default
+;	test	al,1			; is it func1B/func1F ?
+	cmp	al,1bh			; is it func1B/func1F ?
+;	 jz	fdos_DI10		; if so these use the default
+	 je	fdos_DI05		; if so these use the default
+	cmp	al,1fh
+	 jne	fdos_DI10
+fdos_DI05:
 	xor	dl,dl			;  drive so zero DL
 fdos_DI10:
 	mov	FD_DRIVE,dx		; drive in DX

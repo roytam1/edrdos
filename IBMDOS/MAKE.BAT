@@ -81,6 +81,9 @@ IF ERRORLEVEL 1 GOTO FAILED
 %LOCTOOLS%\rasm_sh %LOCTOOLS%\rasm86.exe . .\cmdline.a86 .\bin\cmdline.obj
 IF ERRORLEVEL 1 GOTO FAILED
 
+%LOCTOOLS%\rasm_sh %LOCTOOLS%\rasm86.exe . .\dos7.asm .\bin\dos7.obj
+IF ERRORLEVEL 1 GOTO FAILED
+
 copy ibmdos.inp .\BIN
 CD .\BIN
 ..\%LOCTOOLS%\linkcmd.exe ibmdos[i]

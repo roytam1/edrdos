@@ -1469,7 +1469,13 @@ dd_genioctl:	; 19-generic IOCTL
 	call	point_unit		; get unit descriptor
 
 	cmp	ch,8			; is it the right major category?
-	 jne	ioctl20			; no, return an error
+	 je	ioctl5			; yes, proceed
+	cmp	ch,48h			; else check for cat 48h (FAT32)
+	 jne	ioctl20			; neither one, return an error
+ioctl5:
+
+	mov	cs:byte ptr ioctl_cat,ch
+					; save category code for later use
 
 	or	es:UDSC_FLAGS[di],UDF_UNSURE
 					; media unsure after IOCTL
@@ -1558,8 +1564,14 @@ get1:
 	pop	es
 	lea	di,7[bx]		; ES:DI -> BPB in parameter block
 	pop	ds			; DS:SI -> BPB to copy
-;	mov	cx,UDSC_BPB_LENGTH
-	mov	cx,OLD_BPB_LENGTH
+	cmp	cs:byte ptr ioctl_cat,48h
+					; extended BPB requested?
+	 je	get2			; yes
+	mov	cx,OLD_BPB_LENGTH	; no, use old-style BPB
+	jmps	get3
+get2:
+	mov	cx,UDSC_BPB_LENGTH	; else use extended BPB
+get3:
 	rep	movsb			; copy the BPB across to user
 	pop	di
 	pop	es
@@ -1597,8 +1609,14 @@ ioctl_set:	; set device parameters
 set1:
 	lea	si,7[bx]		; DS:SI -> new BPB from user
 	xchg	ax,di			; ES:DI -> BPB in es:UDSC_
-;	mov	cx,UDSC_BPB_LENGTH
-	mov	cx,OLD_BPB_LENGTH
+	cmp	cs:byte ptr ioctl_cat,48h
+					; extended BPB supplied?
+	 je	set1a			; yes
+	mov	cx,OLD_BPB_LENGTH	; no, copy old-style BPB
+	jmps	set1b
+set1a:
+	mov	cx,UDSC_BPB_LENGTH	; else copy extended BPB
+set1b:
 	rep	movsb			; copy BPB into UDSC as new default
 	xchg	ax,di			; ES:DI -> UDSC_ again
 
@@ -3058,6 +3076,8 @@ extoffvalid	db	0		; extoffset valid flag
 
 	Public	init_runit
 init_runit	db	0		; poked with ROS Unit at boot
+
+ioctl_cat	db	0		; category code for dd_geniotcl
 
 IDATA	ends
 

@@ -34,6 +34,10 @@ of the next patches, but to others there is currently no simple solution.
   partitions this value is not always exact. Also, there is no way to report
   more than 4 GB of free disk space with this function without seriously
   compromising the compatibility with existing software.
+  Update (2.2.2004): I have implemented a new function (7303h) that uses 32-bit
+  values to report the free disk space. The dir command of command.com now
+  displays values more accurately and can also show more than 4 GB. Of course,
+  this does not help old software that does not use this function.
 - The disk utilities Delwatch and Superstor/Stacker do not support 32-bit
   cluster numbers and thus will not work on FAT32 partitions, and there is a
   good chance that support for them is broken on FAT12/16 as well. I would
@@ -44,6 +48,11 @@ of the next patches, but to others there is currently no simple solution.
   to work correctly or they simply disable FAT32 support if they do not detect
   MS-DOS 7. A fix will require writing new system calls, so it will take some
   time.
+  Warning: One of these programs that has been identified is the DOSLFN TSR.
+  When used on FAT32 partitions in DR-DOS 7.01.06 and above, it uses an invalid
+  DPB to access the partition, probably causing loss of data when writing to
+  it. The next version of DOSLFN will probably fix this bug.
+  Another prominent example is ScanDisk from MS-DOS 7.x.
 - The DR-DOS BDOS loader currently does not support booting from FAT32 drives;
   I will probably fix this in one of the next patches.
   Update (15.1.2004): This has been fixed now, please test it.

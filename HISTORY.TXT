@@ -1,5 +1,15 @@
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions
+- added support for category code 48h (FAT32) to generic ioctl function,
+  changed get and set subfunctions to use extended BPBs again, but only for
+  this category
+- fixed bug in device driver initialization code that called driver interrupt
+  routine without checking whether its offset had been changed by the strategy
+  routine, causing Himem64 to hang after unpacking
+- added DOS 7 system call int 21h/AH=73h, implemented sub function 7303h (Get
+  Extended Free Disk Space)
+- changed dir command to use the new free disk space routine when it is
+  available and kilobytes instead of bytes for large numbers
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

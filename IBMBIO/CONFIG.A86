@@ -548,7 +548,13 @@ dev_init:
 	push ds ! pop es		; ES -> Points at the Data Segment
 	mov	ds,strategy_seg		; DS == Device Drive Segment
  	mov	si,di			; DS:SI -> device driver header
+	push	ds
+	push	es
  	callf	cs:strategy		; Call Device Strategy Routine
+	pop	es
+	pop	ds
+	mov	ax,ds:DH_INTERRUPT[si]	; Set up the INTERRUPT Entry Point
+	mov	es:interrupt_off,ax
 	callf	cs:interrupt		; Call Device Interrupt Routine
 	pop di ! pop si ! pop bx	; recover the pointers
 	pop es ! pop ds			; Restore Segment Registers

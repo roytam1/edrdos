@@ -157,7 +157,7 @@ dev_small:				; AX/DX = disk size in sectors
 	inc	ax			; cluster 0,1 are reserved
 	cmp	ax,0FF6h		; is this too large for 12 bits?
 	 jbe	dev_12bit		; skip if 12 bits will do
-	mov	fattype,-1		; else we use 16 bits
+	mov	fattype,1		; else we use 16 bits
 dev_12bit:
 	mov	ax,BT_fat_size
 	mov	nfatsecs,ax

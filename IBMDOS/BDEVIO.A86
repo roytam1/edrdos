@@ -1239,11 +1239,25 @@ device_driver:
 	ret
 
 device_driver10:
+;	push	ds
+;	push	ds:DH_INTERRUPT[si]	; interrupt routine address on stack
+;	push	ds
+;	push	ds:DH_STRATEGY[si]	; strategy routine address on stack
+;	retf				; retf to strategy, interrupt, us
 	push	ds
-	push	ds:DH_INTERRUPT[si]	; interrupt routine address on stack
+	push	si
+	push	cs
+	mov	ax,offset device_driver11
+	push	ax
 	push	ds
 	push	ds:DH_STRATEGY[si]	; strategy routine address on stack
-	retf				; retf to strategy, interrupt, us
+	retf				; retf to strategy and device_driver11
+device_driver11:
+	pop	si
+	pop	ds
+	push	ds
+	push	ds:DH_INTERRUPT[si]	; interrupt routine address on stack
+	retf				; retf to interrupt, us
 
 eject
 ;	Select drive and check for door open ints

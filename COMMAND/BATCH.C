@@ -752,7 +752,7 @@ UWORD FAR *ptr;
 	hp_size = heap() - hp_start;
 
 	i = (sizeof(BCONTROL) + hp_size + 15)/16;
-	mem_alloc(&bc, &i, i, i);	/* allocate new batch structure */
+	mem_alloc((BYTE FAR * NEAR *)&bc, &i, i, i);	/* allocate new batch structure */
 	
 	if (i == 0) {			/* if we can't allocate one	*/
 	    longjmp(break_env, IA_HEAP);/* then pretend heap has run out*/
@@ -810,7 +810,7 @@ UWORD FAR *ptr;
 	forptr = batch->fcontrol;	/* Restore the previous for	*/
 	for_flag = (BOOLEAN) forptr;	/*  control structures 		*/
 	batch = batch->bcontrol;	/* restore ptr to previous batch */
-	mem_free(&bc);			/* free up batch memory */
+	mem_free((BYTE FAR * NEAR *)&bc);			/* free up batch memory */
 #if defined(CDOSTMP)
 	ptr = MK_FP(pd->P_PSP, TmpPspBatchSeg);
 	*ptr = (UWORD)(((ULONG)batch) >> 16);
