@@ -27,3 +27,12 @@ distributions of DR-DOS 7.0x like fdisk, format, diskopt, etc. may also fall
 into this category. Until they have been tested on LBA partitions and it has
 been found that they are safe to use, do not use them without making a backup
 of your hard disk first.
+
+Warning: Beginning with version 7.01.05, DR-DOS supports FAT16 partitions with
+a cluster size of 64 KB. This feature has been tested and found to be working.
+However, until someone has done extensive tests and it has been found that it
+is generally safe to use, use precautions before using it on partitions that
+contain valuable data. Also, please note that many disk tools do not expect to
+see this feature on a DOS based machine, so they most likely do not support it.
+Windows NT and FreeDOS support it, so tools written for these operating systems
+should be safe to use.
