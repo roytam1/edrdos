@@ -46,3 +46,4 @@ of the next patches, but to others there is currently no simple solution.
   time.
 - The DR-DOS BDOS loader currently does not support booting from FAT32 drives;
   I will probably fix this in one of the next patches.
+  Update (15.1.2004): This has been fixed now, please test it.
