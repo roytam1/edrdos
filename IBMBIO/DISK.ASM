@@ -1217,6 +1217,7 @@ trkrw30_lba:
 ;	mov	ax,P_MCNT[bp]		; AL = physical sector count
 	mov	ax,P_MCNT[bp]		; physical sector count
 	mov	word ptr [si+2],ax
+	xor	al,al
 	mov	ah,P_ROSCMD[bp]		; AH = ROS read command
 	add	ah,40h			; extended (LBA) version of command
 	cmp	ah,ROS_LBAVERIFY	; write with verify?
@@ -1226,6 +1227,7 @@ trkrw30_lba:
 	 jc	trkrw50_lba		; skip if any errors occurred
 	mov	ax,P_MCNT[bp]		; else get sector count
 	mov	word ptr [si+2],ax
+	xor	al,al
 	mov	ah,ROS_LBAVERIFY	; verify disk sectors
 trkrw40_lba:				; AH = function, AL = count
 	int_____DISK_INT		; read/write/verify via ROM BIOS
