@@ -1455,6 +1455,8 @@ UWORD	*loadtype;		/* Command file Type			*/
 	    envpath = stack(strlen(heap()) + 1);
 #else
 	    envpath = &pathbuf[0];
+	    if (strlen(heap())>=MAX_ENVLEN)
+	      heap()[MAX_ENVLEN]=0;
 #endif
 	    strcpy(envpath, heap());
 	}

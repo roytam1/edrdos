@@ -144,6 +144,8 @@ biosinit:
 	cli
 	mov	ax,cs			; Initialise our stack and Data Segment
 	mov	ds,ax
+	pop	ds:part_off
+	pop	ds:part_off+2
 	mov	ss,ax
 	mov	sp,offset stack
 	sti
@@ -1873,6 +1875,7 @@ include	initmsgs.def				; Include TFT Header File
 	extrn	dev_count:byte
 	extrn	lastdrvIn:byte
 	extrn	configPass:byte
+	extrn	part_off:word
 
 ;
 ;	PUBLIC Variables which are initialised by the BIOS before the
@@ -1894,6 +1897,7 @@ drdos_seg	dw	0		; segment	"	"	"
 	Public	res_ddsc_ptr
 res_ddsc_ptr	rd	0
 res_ddsc_off	dw	0
+	Public	res_ddsc_seg
 res_ddsc_seg	dw	0
 
 	Public	rcode_offset, rcode_seg, icode_len, rcode_len, rcode_fixups

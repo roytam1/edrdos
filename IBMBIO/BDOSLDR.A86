@@ -90,6 +90,7 @@ login_drive10:
 	mov	intrpt_off,ax
 	mov	intrpt_seg,es		; get interrupt segment
 
+login_drive12:
 	mov	bx,offset req_hdr
 	mov	ds:RH_UNIT,dl		; save logical unit to use
 	mov	ds:RH_CMD,CMD_BUILD_BPB
@@ -98,6 +99,20 @@ login_drive10:
 	 jnc	login_drive15
 	jmp	dev_fail		; return if can't determine BPB
 login_drive15:
+	les	di,ds:RH2_BPB
+	mov	ax,part_off
+	cmp	es:word ptr BPB_HIDDEN[di],ax
+	 jne	login_drive17
+	mov	ax,part_off+2
+	cmp	es:word ptr BPB_HIDDEN+2[di],ax
+	 je	login_drive18
+login_drive17:
+	inc	boot_drv
+	mov	dl,boot_drv
+	jmps	login_drive12
+login_drive18:
+	mov	dl,boot_drv
+	mov	init_drv,dl
 	push	ds ! push si
 	push	ds ! pop es
 	mov	di,offset local_bpb	; ES:DI -> local BPB copy
@@ -779,6 +794,7 @@ INITDATA	dseg	'INITDATA'
 		extrn	current_dos:word	; current BDOS segment
 		extrn	boot_device:dword	; device driver we boot from
 		extrn	boot_drv:byte		; boot drive
+		extrn	init_drv:byte		; init drive
 		extrn	dos_name:byte		; name of BDOS file
 
 strat_ptr	rd	0
@@ -800,6 +816,9 @@ dosfile_size	rw	1
 current_fatsec	dw	-1,-1			; no FAT sector read yet
 fattype		dw	0			; defaults to 12 bit FAT
 nfatsecs	dw	0,0			; number of FAT sectors (32-bit)
+
+	Public	part_off
+part_off	dw	0,0			; offset of boot partition
 
 ;	single error message if BDOS can't be loaded:
 
@@ -857,6 +876,7 @@ BT_fs_root		rw	2
 BT_fs_info		rw	1
 BT_boot_backup		rw	1
 BPB_LENGTH		equ	(offset $-offset local_bpb)
+BPB_HIDDEN		equ	17
 
 	extrn	sector_buffer:byte
 

@@ -1372,7 +1372,8 @@ GLOBAL VOID CDECL cmd_ren(s)
 REG BYTE *s;
 {
 	BYTE	 srcfile[MAX_FILELEN], dstfile[MAX_FILELEN];
-	BYTE	 pattern[MAX_FILELEN-MAX_PATHLEN];  
+/*	BYTE	 pattern[MAX_FILELEN-MAX_PATHLEN];  */
+	BYTE	 pattern[12];
 	BYTE	 *enddir;
 #if defined(PASSWORD)
 	BYTE	*password;

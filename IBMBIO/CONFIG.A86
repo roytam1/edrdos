@@ -385,7 +385,7 @@ setup_hist20:
 	push	ax			; save buffers size in bytes
 	shr	ax,cl			; convert to para's
 	mov	dl,'H'			; History buffer
-	xor	dh,dh
+	mov	dh,ALLOC_IN_UMB
 	call	alloc_instseg		; Allocate Buffer
 	mov	es:word ptr 00[si],ax	; Buffer Start Address
 	pop	cx			; recover buffer size in bytes
@@ -892,11 +892,11 @@ config_finish:		; finish off configuration
 	mov	resdev_off,-1		; only do this once...
 cfg_fin10:
 
+	cmp	byte ptr configPass,1	; skip if second pass
+	 je	cfg_fin20
 	les	bx,func52_ptr		; ES:BX -> base of DOS variables
 	call	setup_drives		; Update No of Physical Drives in case
 					; this is the first pass
-	cmp	byte ptr configPass,1
-	 je	cfg_fin20
 	call	setup_ldt		; setup the ldt's
 cfg_fin20:
 	les	bx,func52_ptr
@@ -1027,7 +1027,7 @@ setup_b80:
 	mov	cl,4
 	shr	ax,cl			; convert to para size
 	mov	dl,'B'			; allocate as a Buffer
-	call	alloc_seg		; allocate a deblocking buffer
+	call	alloc_hiseg		; allocate a deblocking buffer
 	mov	es:F52_DEBLOCK[bx],ax
 	les	bx,drdos_ptr		; ES:BX -> data area
 	mov	es:DRDOS_DEBLOCK[bx],ax	;  of deblocking buffer

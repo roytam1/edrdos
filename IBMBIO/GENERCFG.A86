@@ -1469,7 +1469,8 @@ func_i10:
 	int	21h			; ax:0 -> exec memory
 	push	bx			; we have allocated BX para's
 	mov	es,ax			; ES -> exec memory
-	mov	bx,init_dseg		; we want to protect BX:0 and above
+;	mov	bx,init_dseg		; we want to protect BX:0 and above
+	mov	bx,res_ddsc_seg		; we want to protect BX:0 and above
 	dec	bx			; allow for DMD
 	sub	bx,ax			; we can spare this many paras
 	mov	ah,MS_M_SETBLOCK	;  for the exec so grow the 
@@ -1682,7 +1683,7 @@ func_dos_umb:
 ;
 	mov	hidos,TRUE		; update hidos flag to be ON
 	or	buffersIn,BUFFERS_IN_UMB; enable UMB usage for buffers
-;	or	filesIn,FILES_IN_UMB	; and files
+	or	filesIn,FILES_IN_UMB	; and files
 	or	stacksIn,STACKS_IN_UMB	; and stacks
 	or	lastdrvIn,LASTDRV_IN_UMB; and LDT
 	call	initialise_dmd_upper	; build initial upper memory DMD
@@ -3349,7 +3350,7 @@ endif
 	extrn	mem_size:word		; Real top of Memory
 
 	extrn	init_dseg:word		; Current Init Data Segment
-
+	extrn	res_ddsc_seg:word
 
 include	initmsgs.def				; Include TFT Header File
 

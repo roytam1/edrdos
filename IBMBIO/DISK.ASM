@@ -1577,7 +1577,7 @@ get1:
 	cmp	cs:byte ptr ioctl_cat,48h
 					; extended BPB requested?
 	 je	get2			; yes
-	mov	cx,OLD_BPB_LENGTH	; no, use old-style BPB
+	mov	cx,OLDBPB_LENGTH	; no, use old-style BPB
 	jmps	get3
 get2:
 	mov	cx,UDSC_BPB_LENGTH	; else use extended BPB
@@ -1622,7 +1622,7 @@ set1:
 	cmp	cs:byte ptr ioctl_cat,48h
 					; extended BPB supplied?
 	 je	set1a			; yes
-	mov	cx,OLD_BPB_LENGTH	; no, copy old-style BPB
+	mov	cx,OLDBPB_LENGTH	; no, copy old-style BPB
 	jmps	set1b
 set1a:
 	mov	cx,UDSC_BPB_LENGTH	; else copy extended BPB
@@ -1632,7 +1632,7 @@ set1b:
 
 set2:					; now set track layout
 ;	lea	si,BPB_LENGTH+7[bx]	; DS:SI -> new user layout
-	lea	si,OLD_BPB_LENGTH+7[bx]	; DS:SI -> new user layout
+	lea	si,OLDBPB_LENGTH+7[bx]	; DS:SI -> new user layout
 	mov	es,cs:DataSegment
 	mov	di,CG:layout_table	; ES:DI -> BIOS layout table
 	lodsw				; get sector count

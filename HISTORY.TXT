@@ -107,6 +107,24 @@
 - made command.com ignore leading semicolons in %PATH% environment variable
 - changed location of static arrays in command.com to another segment to work
   around what seems to be a bug in TaskMgr
+(24.11.2004):
+- changed boot code so that DR-DOS will look for ibmdos.com and config.sys on
+  the correct drive when booting from a second primary partition
+- fixed bug that caused temporary DOS data segment and DDSCs to be unprotected
+  when loading a program with INSTALL in config.sys
+- fixed problem with number of physical drives being reset to original value
+  after a new block device had been added with INSTALL in config.sys
+- changed history and deblock buffer setup routines to use upper mem for these
+  buffers if available
+- changed FILES/FCBS to use upper memory by default if available
+- changed number of internal file handles in the DOS header to four, remooved
+  now obsolete command line buffer size hack
+- changed floppy disk BPB table in init to use old-style BPB structure
+- fixed command.com stack corruption problem when PATH is longer than 256 bytes
+- fixed bug that caused int 31h not to directly point to DOS data segment but
+  to the interrupt stub during config.sys execution
+- fixed yet another bug from OpenDOS times that caused the RENAME command to
+  corrupt the command.com stack if the new filename was longer than eight bytes
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device
