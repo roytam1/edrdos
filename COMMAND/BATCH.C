@@ -1476,13 +1476,16 @@ BYTE	**cptr;
 		    cmd++;
 		}
 
-		if(!isdigit(*cmd)) {		/* SYNTAX error if the	    */ 
-		    syntax();			/* first character is not a */
+		if(!isdigit(*cmd) && !isletter(*cmd)) {	/* SYNTAX error if the	    */ 
+		    syntax();				/* first character is not a */
 		    return FALSE;			/* digit.		    */
 		}
 
-		while(isdigit(*cmd))
+		if (isdigit(*cmd))
+		  while(isdigit(*cmd))
 		    level = level * 10 + (*cmd++ - '0');
+		else
+		  level=tolower(*cmd++)-'a'+1;
 
 		level = level & 0x00FF;
 

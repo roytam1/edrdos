@@ -1,3 +1,8 @@
+There are currently no serious bugs known to be in Enhanced DR-DOS, but you
+might encounter problems with software that is not adapted to some of its
+features. In particular, you should read the following warnings before using
+any disk tools:
+
 Warning: Beginning with version 7.01.04, DR-DOS is able to use the LBA BIOS
 functions to access hard disk partitions outside the 7.8 GB limit defined by
 the old CHS (cylinder, head & sector) system. This is no problem for any disk
@@ -23,70 +28,21 @@ should be safe to use.
 
 Update: Chkdsk seems to work with both LBA partitions and 64K clusters.
 
-In version 7.01.06 I have introduced support for the FAT32 file system to
-DR-DOS. This is quite an advancement and was requested by many users, but has
-also led to a number of problems. Some of these will probably be fixed in one
-of the next patches, but to others there is currently no simple solution.
-- DR-DOS reports the free space on a partition in clusters; this value is per
-  definition a 16-bit number, so this does not work on FAT32 partitions. I have
-  tried to compensate this problem by making this function use dynamic cluster
-  sizes to report the free space as accurately as possible, however, on FAT32
-  partitions this value is not always exact. Also, there is no way to report
-  more than 4 GB of free disk space with this function without seriously
-  compromising the compatibility with existing software.
-  Update (2.2.2004): I have implemented a new function (7303h) that uses 32-bit
-  values to report the free disk space. The dir command of command.com now
-  displays values more accurately and can also show more than 4 GB. Of course,
-  this does not help old software that does not use this function.
-- The disk utilities Delwatch and Superstor/Stacker do not support 32-bit
-  cluster numbers and thus will not work on FAT32 partitions, and there is a
-  good chance that support for them is broken on FAT12/16 as well. I would
-  generally advise against using them until someone has tested them and it has
-  been found that they are safe to use with this patch.
-- Several disk tools that were written for MS-DOS 7 currently do not work on
-  FAT32 partitions in DR-DOS because they either require the MS-DOS 7 FAT32 API
-  to work correctly or they simply disable FAT32 support if they do not detect
-  MS-DOS 7. A fix will require writing new system calls, so it will take some
-  time.
-  Warning: One of these programs that has been identified is the DOSLFN TSR.
-  When used on FAT32 partitions in DR-DOS 7.01.06 and above, it uses an invalid
-  DPB to access the partition, probably causing loss of data when writing to
-  it. The next version of DOSLFN will probably fix this bug.
-  Update (30.5.2004): DOSLFN now seems to work on FAT32 partitions, please test
-  this feature.
-  Another prominent example is ScanDisk from MS-DOS 7.x.
-  Update (24.3.2004): I have implemented additional functions of the DOS 7 API
-  to make ScanDisk work on FAT32 drives, however, to enable this functionality,
-  ScanDisk must be given version number 7.1 with the SetVer command.
-  Update (20.4.2004): DOSLFN no longer shows garbage in the root dir of FAT32
-  drives, but it still does not work. The reason for this is currently unknown.
-  Scandisk will always report that the free disk space on FAT32 drives is wrong
-  if run under DR-DOS. When asked to "fix" this, it apparently does not change
-  the value in the FSInfo block, but still claims that it is wrong. This is
-  probably just a rounding error in Scandisk that can be ignored.
-- The DR-DOS BDOS loader currently does not support booting from FAT32 drives;
-  I will probably fix this in one of the next patches.
-  Update (15.1.2004): This has been fixed now, please test it.
-- Apparently, the int 25/26h absolute disk read/write interface in MS-DOS has
-  a bug that keeps it from working on FAT32 drives. DR-DOS, on the other hand,
-  does not have this bug, and will happily work (at least theoretically) on
-  partitions that are up to 2 terabytes in size. This would hardly pose a
-  problem, however, some disk tools abuse this as a test to check whether a
-  partition has been formatted with FAT32, causing them to fail on FAT32 drives
-  in DR-DOS. Again, this is a bug in these tools, not in DR-DOS, and if you
-  encounter one of these programs, please contact its author and ask him to
-  correct this.
-  Note to programmers: It should be obvious that the support for the FAT32 file
-  system is in no way dependent on the presence of the MS-DOS 7.1 API, yet many
-  still seem to think "no MS-DOS FAT32 API = no FAT32", or they just check for
-  version numbers instead of APIs. Also, the presence of a bug or limitation in
-  one DOS is nothing you can rely on; software can be written to work around
-  known bugs in an OS, but should never rely on them or exploit them.
-  Since the int 25/26h interface is present in all versions of DOS and int
-  21h/ax=7305h does not offer any substantial benefits over it on non-MS-DOS
-  PC operating systems, the int 25/26h interface should be given preference and
-  int 21h/ax=7305 should only be used as a fallback if the former fails.
-- The TaskManager will not work properly in TaskSwitcher mode, causing new
-  tasks to hang. The reason for this is unknown, but it seems to be related to
-  the changes for FAT32 support. The Multitasker does not seem to be affected,
-  though.
+Warning: In version 7.01.06 I have introduced support for the FAT32 file system
+to DR-DOS. However, many disk tools (including those of DR-DOS 7.0x) do not
+support FAT32, at least not in DOS. You should not use any disk tools on FAT32
+drives unless you know that they are compatible with FAT32 and large drives.
+Tools written for FreeDOS or MS-DOS 7 and higher should be safe to use.
+
+Enhanced DR-DOS v7.01.07 again adds new features that might prove incompatible
+with older software:
+- It now supports drives with 128K cluster size. This is mostly untested, since
+  there are no DOS tools that support this cluster size. Existing tools
+  probably cannot handle this size.
+- Several config.sys commands that DR-DOS 7.03 uses to move data structures to
+  upper memory are now supported, some of which have been enhanced to provide
+  additional benefits. Older software might expect to see these structures in
+  lower mem, so you might have to turn those options off to run it.
+  Also, because of enhancements of the internal memory handling, some older TSR
+  programs might not work properly if you load them with INSTALL/HIINSTALL in
+  config.sys. If that is the case, use INSTALLLAST/HIINSTALLLAST instead.
