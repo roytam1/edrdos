@@ -1761,10 +1761,7 @@ file_update:
 	cmp	dosfat,FAT32		; is this a FAT32 file system?
 	 jne	file_update05		; no, then skip this entry
 	mov	ax,es:DHNDL_BLK1H[bx]	; get high word of 1st block in file
-	push	di
-	lea	di,DBLOCK1H[di]
-	stosw				; and store it in the dir entry
-	pop	di
+	mov	DBLOCK1H[di],ax		; and store it in the dir entry
 file_update05:
 	mov	ax,es:DHNDL_BLK1[bx]	; 1st block in file
 	lea	di,DTIME[di]		; DI -> [time,date,block1,size]

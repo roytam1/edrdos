@@ -474,7 +474,7 @@ endif
 f36_OK30:
 	cmp	dx,0			; more than fits into 16-bit register?
 	 je	f36_OK50			; no, the value is exact
-	cmp	al,64			; cluster size already 32K?
+	cmp	al,128			; cluster size already 64K?
 	 jae	f36_OK40
 	shl	al,1			; cluster size * 2
 	shr	dx,1			; free clusters / 2

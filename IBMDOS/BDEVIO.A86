@@ -1915,4 +1915,33 @@ output_hex30:
 	ret
 output_hex40	db	20h,0		; end of string
 
+	public	output_fcb
+output_fcb:
+;----------------
+; On Entry:
+;	si = offset CGROUP:message_msg
+; On Exit:
+;	None
+	push	si
+	push	ds
+	push	ax
+	push	bx
+	push	cx
+	mov	cx,11
+	lodsb				; get 1st character (never NULL)
+output_fcb10:
+	mov	ah,0Eh
+	mov	bx,7
+	push	cx
+	int	10h			; TTY write of character
+	pop	cx
+	lodsb				; fetch another character
+	loop	output_fcb10
+	pop	cx
+	pop	bx
+	pop	ax
+	pop	ds
+	pop	si
+	ret
+
 	end

@@ -421,7 +421,10 @@ getdir:
 					;struct dirfcb *getdir(offset,srchl);
 
 	cmp	dcnt,0FFFFh		;if ((dcnt == 0xffff) &&
-	 jne	gtd_next
+;	 jne	gtd_next
+	 je	gtdo10
+	 jmp	gtd_next
+gtdo10:
 	mov	hash+2,cx		; Save off calling option
 	xor	ax,ax			; hash code 0 for free entry
 	cmp	cx,1			; what kind of search?
@@ -437,6 +440,10 @@ getdir:
 gtdo15:
 	mov	hash,ax			; save it for search
 	call	hdsblk			; get directory block
+	cmp	dosfat,FAT32		; is this a FAT32 file system?
+	 jne	gtdo3			; no, then skip
+	mov	ax,word ptr fsroot	; else use the real root cluster number instead
+	mov	dx,word ptr fsroot+2
 gtdo3:
 	push	dx			; save dir block for later
 	push	ax
