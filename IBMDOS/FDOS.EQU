@@ -238,3 +238,5 @@ FAT32		equ	0		; 32 bit fat
 
 ENDDIR		equ	0ffffh		;end of directory
 
+FS_BFREE	equ	1e8h		; free cluster offset in FS info block
+FS_BBLOCK	equ	1ech		; next block offset in FS info block

@@ -65,7 +65,7 @@ endif
 
 BDOS_DATA	dseg	word
 
-fatrec		rw	1		; current FAT record
+fatrec		rw	2		; current FAT record
 
 fatbytl		rb	1		; low byte of split FAT entry
 fatbyth		rb	1		; high byte of split FAT entry
@@ -107,6 +107,7 @@ BDOS_CODE	cseg
 	extrn	select_adrive:near	; select drive AL
 	extrn	write_block:near
 	extrn	output_hex:near
+	extrn	div32:near
 
 	public	alloc_cluster		; allocate data block
 	public	alloc_chain		; allocate a chain
@@ -162,6 +163,12 @@ update_ddsc_free15:
 
 update_ddsc_free30:
 ; rebuild our free space count
+	call	read_fsinfo		; read the info block first, if one exists
+	cmp	es:word ptr DDSC_BFREE+2[bx],0ffffh	; still uninitialized?
+	 jne	update_ddsc_free10	; no, then use this value
+	cmp	es:word ptr DDSC_BFREE[bx],0ffffh
+	 jne	update_ddsc_free10
+update_ddsc_free31:			; else really rebuild it
 	xor	ax,ax			; assume no free space yet
 	xor	dx,dx
 	lea	di,DDSC_BBLOCK[bx]	; ES:DI -> DDSC_BBLOCK
@@ -179,10 +186,12 @@ update_ddsc_free40:
 	adc	dx,0
 ;	cmp	ax,lastcl		; are we beyond end of disk
 	cmp	dx,blastcl+2		; are we beyond end of disk
-	 ja	update_ddsc_free10	; stop if all free blocks counted
+;	 ja	update_ddsc_free10	; stop if all free blocks counted
+	 ja	update_ddsc_free50	; stop if all free blocks counted
 	 jb	update_ddsc_free45
 	cmp	ax,blastcl
-	 ja	update_ddsc_free10
+;	 ja	update_ddsc_free10
+	 ja	update_ddsc_free50
 update_ddsc_free45:
 ;	push	ax			; save current index
 	push	dx			; save current index
@@ -195,7 +204,9 @@ update_ddsc_free45:
 	add	es:word ptr DDSC_BFREE[bx],1	; one more free block
 	adc	es:word ptr DDSC_BFREE+2[bx],0
 	jmps	update_ddsc_free40	; try next block
-
+update_ddsc_free50:
+	call	write_fsinfo		; write a new FS info block first if applicable
+	 jmps	update_ddsc_free10
 
 
 discard_dirty:
@@ -780,7 +791,7 @@ fixfat70:
 	les	si,current_ddsc
 	add	es:DDSC_FREE[si],ax	; update free space count
 	add	es:word ptr DDSC_BFREE[si],ax	; update free space count (32-bit)
-	adc	es:word ptr DDSC_BFREE+2[si],0
+;	adc	es:word ptr DDSC_BFREE+2[si],0
 	les	si,bcb_root		; get buffer control block
 	or	es:BCB_FLAGS[si],BF_DIRTY
 					; mark the buffer as dirty
@@ -788,13 +799,17 @@ fixfat70:
 	 je	fixfat80		; need some magic if so
 					; handle a split FAT update
 	mov	dx,fatrec		; lower sector number
-	inc	dx			; get the upper sector
+	mov	ax,fatrec+2
+;	inc	dx			; get the upper sector
+	add	dx,1			; get the upper sector
+	adc	ax,0
 	call	locate_fat		; find the buffer
 	or	es:BCB_FLAGS[si],BF_DIRTY
 					; mark buffer as write pending
 	mov	al,fatbyth		; get the high byte
 	mov	es:BCB_DATA[si],al	; store the high byte at the beginning
 	mov	dx,fatrec		; get the previous sector
+	mov	ax,fatrec+2
 	call	locate_fat		; read into memory
 	or	es:BCB_FLAGS[si],BF_DIRTY
 					; mark buffer as write pending
@@ -845,13 +860,30 @@ fatptr10:
 ;	add	ax,bx			; AX = offset into FAT
 ;	adc	dx,0			; AX/DX = 32 bit offset
 	mov	cx,psecsiz		; CX = sector size
-	div	cx			; AX = sector offset
+	push	cx
+;	div	cx			; AX = sector offset
+	push	dx
+	push	ax
+	xor	bx,bx
+	push	bx
+	push	cx
+	sub	sp,8			; reserve space for result on stack
+	call	div32
+	pop	bx
+	add	sp,2
+	pop	ax
+	pop	dx
+	add	sp,8			; clean up the stack
+	pop	cx
 	dec	cx			; CX = sector size - 1
-	push	dx			; DX = offset within FAT sector
+;	push	dx			; DX = offset within FAT sector
+	push	bx			; BX = offset within FAT sector
 	push	cx
 	add	ax,fatadd		; make it absolute sector address
+	adc	dx,0
 	mov	fatrec,ax		; save FAT sector for FIXFAT
-	xchg	ax,dx			; DX = FAT sector
+	mov	fatrec+2,dx
+	xchg	ax,dx			; AX:DX = FAT sector
 	call	locate_fat		; locate the sector
 	pop	cx			; CX = sector size - 1
 	pop	bx			; restore offset within FAT sector
@@ -880,7 +912,10 @@ fatptr30:				; block split across two sectors
 	mov	al,es:[bx]		; get the low byte from 1st sector
 	mov	fatbytl,al		; save it for later
 	mov	dx,fatrec		; get the FAT record is
-	inc	dx			; get 2nd sector
+	mov	ax,fatrec+2
+;	inc	dx			; get 2nd sector
+	add	dx,1			; get 2nd sector
+	adc	ax,0
 	call	locate_fat		; read the 2nd sector
 	sub	bx,bx
 	lea	bx,BCB_DATA[si+bx]	; ES:BX -> buffer data
@@ -897,13 +932,13 @@ fatptr30:				; block split across two sectors
 
 if DOS5
 
-;	entry:	DX = sector number to read
+;	entry:	AX:DX = sector number to read
 ;	exit:	ES:SI = BCB
 
 locate_fat:
 ;----------
 ;	mov	ah,0			; set sector address overflow = 0
-	mov	ax,0			; set sector address overflow = 0
+;	mov	ax,0			; set sector address overflow = 0
 	mov	cx,0ff00h+BF_ISFAT	; request a FAT buffer w/ preread
 locate_buffer:
 ;-------------
@@ -998,6 +1033,12 @@ update_dat:
 ;----------
 update_fat:		;write out modified FAT buffers
 ;----------
+	push	es
+	push	bx
+	les	bx,current_ddsc
+	call	write_fsinfo		; update fs info block if applicable
+	pop	bx
+	pop	es
 	mov	ah,BF_ISFAT		; flush all dirty FAT buffers
 ;	jmp	flush_adrive		; update the disk if dirty
 
@@ -1348,14 +1389,18 @@ flush_buf2:
 flush_buf3:				; CX = # of times to write sector
 	mov	rwmode,al
 	sub	ax,ax			; offset for write = 0
+	sub	dx,dx
 flush_buf4:				; loop back to here for other copies
+	push	dx
 	push	ax
 	push	cx			; save loop variables
 	call	setup_rwx		; compute disk address
 	call	write_buff		; write the sector
 	pop	cx
 	pop	ax
+	pop	dx
 	add	ax,nfatrecs		; move to next FAT copy
+	adc	dx,nfatrecs+2
 	loop	flush_buf4		; repeat for all FAT copies
 flush_buf5:
 	and	es:BCB_FLAGS[si],not BF_DIRTY
@@ -1437,15 +1482,19 @@ fill_buf3:
 fill_buf4:
 	mov	es:BCB_DRV[si],0FFh	; discard in case of error
 	sub	ax,ax			; no offset for 2nd copy yet
+	sub	dx,dx
 fill_buf5:
+	push	dx
 	push	ax
 	call	setup_rwx		; compute disk address
 	call	read_buff		; read the sector
 	pop	ax
+	pop	dx
 	 jns	fill_buf6
 ; we can end here only if CX was non-zero above and we failed to read a
 ; FAT copy while there is still another one we could use
 	add	ax,nfatrecs
+	adc	dx,nfatrecs+2
 	dec	cx
 	jmps	fill_buf5
 fill_buf6:
@@ -1516,20 +1565,74 @@ write_buff10:
 
 setup_rwx:
 ;---------
-;	entry:	AX = sector offset (multiple FAT writes)
+;	entry:	DX:AX = sector offset (multiple FAT writes)
 ;		ES:SI = BCB, BCB_REC filled in
 ;	exit:	all values set up for RWXIOSIF
 
 	mov	cur_dma_seg,es		; segment = BCB_SEGMENT
+	push	dx
 	lea	dx,BCB_DATA[si]
 	mov	cur_dma,dx		; offset
-	xor	dx,dx
+	pop	dx
+;	xor	dx,dx
 	add	ax,es:BCB_REC[si]
 ;	adc	dl,es:byte ptr BCB_REC2[si]
 	adc	dx,es:BCB_REC2[si]
 	mov	word ptr pblock,ax	; xfer starts at this block
 	mov	word ptr pblock+WORD,dx
 	mov	mult_sec,1		; single sector transfer
+	ret
+
+read_fsinfo:
+	cmp	dosfat,FAT32		; is this a FAT32 partition?
+	 jne	read_fsinfo10		; no, then there is no fs info block
+	push	es
+	push	ds
+	push	es
+	pop	ds
+	mov	dx,ds:DDSC_FSINFO[bx]	; sector number of FS info block
+	xor	ax,ax
+	mov	cx,0FF00h+BF_ISDAT	; data buffer with preread
+	push	bx
+	call	locate_buffer		; read FS info block
+	pop	bx
+	mov	ax,es:word ptr BCB_DATA+FS_BFREE[si]	; free cluster count in FS info block
+	mov	dx,es:word ptr BCB_DATA+FS_BFREE+2[si]
+	mov	ds:word ptr DDSC_BFREE[bx],ax	; use this as new free cluster count
+	mov	ds:word ptr DDSC_BFREE+2[bx],dx
+	mov	ax,es:word ptr BCB_DATA+FS_BBLOCK[si]	; next free block in FS info block
+	mov	dx,es:word ptr BCB_DATA+FS_BBLOCK+2[si]
+	pop	ds
+	pop	es
+read_fsinfo10:
+	ret
+
+write_fsinfo:
+	cmp	dosfat,FAT32		; is this a FAT32 partition?
+	 jne	write_fsinfo10		; no, then there is no fs info block
+	push	es
+	push	ds
+	push	es
+	pop	ds
+	mov	dx,ds:DDSC_FSINFO[bx]	; sector number of FS info block
+	xor	ax,ax
+	mov	cx,0FF00h+BF_ISDAT	; data buffer with preread
+	push	bx
+	call	locate_buffer		; read FS info block
+	pop	bx
+	mov	ax,ds:word ptr DDSC_BFREE[bx]	; update buffer
+	mov	dx,ds:word ptr DDSC_BFREE+2[bx]
+	mov	es:word ptr BCB_DATA+FS_BFREE[si],ax
+	mov	es:word ptr BCB_DATA+FS_BFREE+2[si],dx
+	mov	ax,ds:word ptr DDSC_BBLOCK[bx]
+	mov	dx,ds:word ptr DDSC_BBLOCK+2[bx]
+	mov	es:word ptr BCB_DATA+FS_BBLOCK[si],ax
+	mov	es:word ptr BCB_DATA+FS_BBLOCK+2[si],dx
+	or	es:BCB_FLAGS[si],BF_DIRTY	; mark buffer as modified
+	call	flush_buffer		; and write it back to disk
+	pop	ds
+	pop	es
+write_fsinfo10:
 	ret
 
 	END

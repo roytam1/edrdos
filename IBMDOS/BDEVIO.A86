@@ -1411,7 +1411,9 @@ select_ddsc:
 	mov	di,offset local_ddsc2
 	mov	cx,LOCAL_DDSC2_LEN
 	rep	movsb			; more interesting bits to copy
-	push es ! pop ds		; DS=ES=local data segment
+;	push es ! pop ds		; DS=ES=local data segment
+	push ds ! push es
+	pop ds ! pop es			; swap ES and DS
 ;	mov	ax,psecsiz		; now initialise some other vaiiables
 ;	mov	cl,clshf
 ;	shl	ax,cl			; AX = bytes per cluster
@@ -1441,7 +1443,7 @@ select_ddsc:
 	div	cx			;  per cluster - handy for
 	mov	dirperclu,ax		;  subdirectories
 	mov	ax,FAT32
-	cmp	DDSC_NFATRECS[bx],0	; is it a 32 bit FAT ?
+	cmp	es:DDSC_NFATRECS[bx],0	; is it a 32 bit FAT ?
 	 je	select_ddsc10
 	mov	ax,FAT12
 	cmp	lastcl,MAX12		; is it a 12 bit FAT ?
