@@ -32,11 +32,10 @@
 ;
 ;    ENDLOG
 
-
-DCNTRL_DSADD    equ dword ptr 0000h   
-DCNTRL_DSOFF    equ  word ptr 0000h   
-DCNTRL_DSSEG    equ  word ptr 0002h   
-DCNTRL_COUNT    equ  word ptr 0004h   
+DCNTRL_DSADD    equ dword ptr 0000h  
+DCNTRL_DSOFF    equ  word ptr 0000h  
+DCNTRL_DSSEG    equ  word ptr 0002h  
+DCNTRL_COUNT    equ  word ptr 0004h  
 DCNTRL_LEN	equ	6
 
 DHNDL_COUNT	equ	word ptr 00h		; 00 - Usage Count
@@ -82,27 +81,27 @@ DHNDL_DEVPTR	equ	dword ptr 07h		; 07 - pointer to device
 DHNDL_DEVOFF	equ	word ptr 07h		; 07 - offset of device
 DHNDL_DEVSEG	equ	word ptr 09h		; 09 - segment of device
 DHNDL_BLK1	equ	word ptr 0Bh		; 0B - first cluster in file
-DHNDL_TIME	equ	word ptr 0Dh		; 0D - file time stamp
-DHNDL_DATE	equ	word ptr 0Fh		; 0F - file date stamp
-DHNDL_SIZE	equ	dword ptr 11h		; 11 - file length
-DHNDL_SIZELO	equ	word ptr 11h
-DHNDL_SIZEHI	equ	word ptr 13h
-DHNDL_POS	equ	dword ptr 15h		; 15 - current file position
-DHNDL_POSLO	equ	word ptr 15h
-DHNDL_POSHI	equ	word ptr 17h
-DHNDL_IDX	equ	word ptr 19h		; 19 - relative cluster within file of last read
-DHNDL_DBLK	equ	word ptr 1Bh		; 1B - cluster # of dir entry
-DHNDL_DCNTHI	equ	byte ptr 1Eh		; 1E - dir offset # within cluster
-DHNDL_DCNTLO	equ	byte ptr 1Fh		; 1F - dir offset # within cluster
-DHNDL_NAME	equ	byte ptr 20h		; 20 - File/Device Name
-DHNDL_EXT	equ	byte ptr 28h		; 28 - File extension
-DHNDL_SFT	equ	dword ptr 2Bh		; 2B - pointer to previous SFT
-DHNDL_UID	equ	word ptr 2Fh		; 2F - Owning Machine ID
-DHNDL_PSP	equ	word ptr 31h		; 31 - Owning PSP
-DHNDL_SHARE	equ	word ptr 33h		; 33 - Offset of sharing record
-DHNDL_BLK	equ	word ptr 35h		; 35 - absolute cluster of last read
+DHNDL_TIME	equ	word ptr 0Fh		; 0D - file time stamp
+DHNDL_DATE	equ	word ptr 11h		; 0F - file date stamp
+DHNDL_SIZE	equ	dword ptr 13h		; 11 - file length
+DHNDL_SIZELO	equ	word ptr 13h
+DHNDL_SIZEHI	equ	word ptr 15h
+DHNDL_POS	equ	dword ptr 17h		; 15 - current file position
+DHNDL_POSLO	equ	word ptr 17h
+DHNDL_POSHI	equ	word ptr 19h
+DHNDL_IDX	equ	word ptr 1Bh		; 19 - relative cluster within file of last read
+DHNDL_DBLK	equ	word ptr 1Fh		; 1B - cluster # of dir entry
+DHNDL_DCNTHI	equ	byte ptr 24h		; 1E - dir offset # within cluster
+DHNDL_DCNTLO	equ	byte ptr 25h		; 1F - dir offset # within cluster
+DHNDL_NAME	equ	byte ptr 26h		; 20 - File/Device Name
+DHNDL_EXT	equ	byte ptr 2Eh		; 28 - File extension
+DHNDL_SFT	equ	dword ptr 31h		; 2B - pointer to previous SFT
+DHNDL_UID	equ	word ptr 35h		; 2F - Owning Machine ID
+DHNDL_PSP	equ	word ptr 37h		; 31 - Owning PSP
+DHNDL_SHARE	equ	word ptr 39h		; 33 - Offset of sharing record
+DHNDL_BLK	equ	word ptr 3Bh		; 35 - absolute cluster of last read
 						; 37 - dword reserved for IFS
-DHNDL_LEN	equ	3Bh
+DHNDL_LEN	equ	43h
 
 ; With DOS 3 structures _DBLK is a 16 bit
 
@@ -112,10 +111,10 @@ LDT_NAME	equ	byte ptr 00h		; 00 - Ascii Name field
 LDT_FLAGS	equ	word ptr 43h		; 43 - Flag field
 LDT_PDT		equ	dword ptr 45h		; 45 - PDT for this drive
 LDT_BLK		equ	word ptr 49h		; 49 - directory sector 
-LDT_ROOT    equ word ptr 4bh        ; 4B - virtual block root 
-LDT_DRV     equ byte ptr 4dh        ; 4D - physical drive 
-LDT_ROOTLEN	equ	word ptr 4fh		; 4F - Length of root portion
-LDT_LEN		equ	58h
+LDT_ROOT	equ	word ptr 4dh		; 4B - virtual block root
+LDT_DRV		equ	byte ptr 51h		; 4D - physical drive 
+LDT_ROOTLEN	equ	word ptr 53h		; 4F - Length of root portion
+LDT_LEN		equ	5ch
 
 LFLG_NETWRKD	equ	8000h
 LFLG_PHYSICAL	equ	4000h
