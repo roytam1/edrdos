@@ -114,7 +114,7 @@ LDT_BLK		equ	word ptr 49h		; 49 - directory sector
 LDT_ROOT	equ	word ptr 4dh		; 4B - virtual block root
 LDT_DRV		equ	byte ptr 51h		; 4D - physical drive 
 LDT_ROOTLEN	equ	word ptr 53h		; 4F - Length of root portion
-LDT_LEN		equ	5ch
+LDT_LEN		equ	58h
 
 LFLG_NETWRKD	equ	8000h
 LFLG_PHYSICAL	equ	4000h
