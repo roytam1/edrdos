@@ -429,7 +429,10 @@ gtdo10:
 	xor	ax,ax			; hash code 0 for free entry
 	cmp	cx,1			; what kind of search?
 	 je	gtdo15			; CL=1: find free entry (AX=0)
-	 jb	gtd_next		; CL=0: find any entry (unhashed)
+;	 jb	gtd_next		; CL=0: find any entry (unhashed)
+	 jae	gtdo12
+	jmp	gtd_next		; CL=0: find any entry (unhashed)
+gtdo12:
 	or	ch,ch			; name in INFO_FCB+1?
 	 jnz	gtd_next		; no, unhashed search
 	mov	bx,offset info_fcb
@@ -440,7 +443,11 @@ gtdo10:
 gtdo15:
 	mov	hash,ax			; save it for search
 	call	hdsblk			; get directory block
-	cmp	dosfat,FAT32		; is this a FAT32 file system?
+	cmp	ax,0			; is this the root dir?
+	 jne	gtdo3			; no
+	cmp	dx,0
+	 jne	gtdo3
+	cmp	dosfat,FAT32		; if yes, is this a FAT32 file system?
 	 jne	gtdo3			; no, then skip
 	mov	ax,word ptr fsroot	; else use the real root cluster number instead
 	mov	dx,word ptr fsroot+2
