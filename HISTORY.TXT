@@ -1,3 +1,11 @@
+7.01.04:
+- added routines to convert LBA values to CHS and vice versa
+- rewrote the partition registering routine to use the LBA values in the
+  partition tables instead of the obsolete CHS values, disabled old code
+- added int 13 extensions (LBA) support to the partition login and track r/w
+  routines
+- added support for partition type 0eh (FAT16B LBA)
+
 7.01.03:
 - added a hex value output routine for debugging purposes
 - changed the behavior of the partition registering routine to not follow loops
