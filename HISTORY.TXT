@@ -1,3 +1,8 @@
+7.01.03:
+- added a hex value output routine for debugging purposes
+- changed the behavior of the partition registering routine to not follow loops
+  in the partition tables
+
 7.01.02:
 - changed some text strings to reflect the new version number
 - slightly changed the structure of the start-up message routine
