@@ -52,6 +52,8 @@ of the next patches, but to others there is currently no simple solution.
   When used on FAT32 partitions in DR-DOS 7.01.06 and above, it uses an invalid
   DPB to access the partition, probably causing loss of data when writing to
   it. The next version of DOSLFN will probably fix this bug.
+  Update (30.5.2004): DOSLFN now seems to work on FAT32 partitions, please test
+  this feature.
   Another prominent example is ScanDisk from MS-DOS 7.x.
   Update (24.3.2004): I have implemented additional functions of the DOS 7 API
   to make ScanDisk work on FAT32 drives, however, to enable this functionality,
@@ -84,3 +86,7 @@ of the next patches, but to others there is currently no simple solution.
   21h/ax=7305h does not offer any substantial benefits over it on non-MS-DOS
   PC operating systems, the int 25/26h interface should be given preference and
   int 21h/ax=7305 should only be used as a fallback if the former fails.
+- The TaskManager will not work properly in TaskSwitcher mode, causing new
+  tasks to hang. The reason for this is unknown, but it seems to be related to
+  the changes for FAT32 support. The Multitasker does not seem to be affected,
+  though.

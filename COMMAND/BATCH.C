@@ -282,13 +282,15 @@ GLOBAL VOID inherit_TMP_state(VOID);
 GLOBAL BOOLEAN getcmd(line)		/* read command line */
 BYTE *line;
 {
-	BYTE *s;
+	BYTE *s,*s1;
 	BOOLEAN quote = FALSE;
 	BOOLEAN	cancel_prompt = FALSE;
 #if defined(DOSPLUS)
 	WORD	i;
 	BYTE	cmd_name[16];
 #endif
+	BYTE envvar[128];
+	BYTE varbuf[128];
 
 	back_flag = FALSE;		/* Disable BackGround Processing*/
 
@@ -395,6 +397,37 @@ batch_restart:
 	while(*s) {
 	    if(*s == '"')		/* Check for a " character and  */
 		quote = !quote; 	/* update the flag correctly	*/
+
+	    if (*s=='%')
+	      if (*(s+1)=='%')
+		s++;
+	      else {
+		s1=s+1;
+		i=0;
+		envvar[i]='\0';
+		while (*s1)
+		  if (*s1=='%')
+		    if (*(s1+1)=='%') {
+		      s1++;
+		      envvar[i++]=*s1++;
+		    }
+		    else {
+		      envvar[i]='\0';
+		      strcat(envvar,"=");
+		      s=s1+1;
+		      strupr(envvar);
+		      if (!(env_scan(envvar,varbuf))) {
+			s1=varbuf;
+			while (*s1)
+			  *line++=*s1++;
+		      }
+		      else
+			break;
+		    }
+		  else {
+		    envvar[i++]=*s1++;
+		  }
+	      }
 
 #if !defined(DOSPLUS)
 	    if(*s == ESC_CHAR &&	/* If the Escape character has  */
@@ -1400,6 +1433,7 @@ BYTE	**cptr;
         WORD	attr;
 	UWORD   userid;
 	LONG	val1,val2;
+	BYTE	quoteflag;
 
         cmd=*cptr;
         not = cond = NO;			/* Initialise the Flags     */
@@ -1580,10 +1614,11 @@ BYTE	**cptr;
 	    default:
 		str1 = cmd;			/* Extract String 1	    */
 
-		while ((!is_blank(cmd)) && (*cmd != '=') &&
+		quoteflag=0;
+		while ((!is_blank(cmd) || quoteflag) && (*cmd != '=') &&
 		       ((*cmd != '!') || (cmd[1]!= '=')) &&
 		       (*cmd != '<') && (*cmd != '>')) {
-
+		    if (*cmd=='"') quoteflag=!quoteflag;
 		    cmd = skip_char(cmd);
 		}
 
@@ -1603,7 +1638,11 @@ BYTE	**cptr;
 
 		cmd = deblank(cmd);
 		str2 = cmd;
-		while (!is_blank(cmd)) cmd = skip_char(cmd);
+		quoteflag=0;
+		while (!is_blank(cmd) || quoteflag) {
+		  if (*cmd=='"') quoteflag=!quoteflag;
+		  cmd = skip_char(cmd);
+		}
 		*cmd++ = 0;
 
 		if (*str1 == '#') {

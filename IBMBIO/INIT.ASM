@@ -196,7 +196,7 @@ else
 	dw	offset CGROUP:INITDATA	; compresses from INITDATA onwards
 endif					; this word set to 0 when compressed
 
-	orgabs	06h
+	org	06h
     db  'COMPAQCompatible'  
 
 	dw	offset CGROUP:RCODE	; lets find offset of RCODE

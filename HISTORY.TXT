@@ -44,6 +44,24 @@
   in upper or high memory.
 - added new config.sys commands HIFILES, HIFCBS, HISTACKS and HILASTDRIVE to
   load these data structures high even if DOS itself is loaded low
+(30.5.2004):
+- fixed bug in function 7302h (Get Extended DPB) which caused corruption of the
+  DR-DOS header
+- fixed bugs in functions 7302h/7303h which caused the carry flag to be set
+  even on successful operation, causing DOSLFN to not recognize FAT32 drives
+  properly
+- fixed bug that caused DR-DOS to use the total number of clusters on drive
+  instead of the highest cluster number in the DDSC structure on FAT32 drives;
+  changed functions 7302h/7303h accordingly
+- added support for function 3001h (Get Version Flag) which is needed by
+  Windows 3.x
+- changed default loading for file handles and FCBs to low memory again because
+  Windows 3.x seems to have trouble when they are loaded high
+- worked around a bug in MASM that led to errors in the DR-DOS header which was
+  the reason why the taskswitcher refused to start
+- fixed bugs in command.com to make comparisons in batch files with quoted
+  strings work as expected
+- added support for environment variables on the command line
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

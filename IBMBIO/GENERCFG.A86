@@ -1625,7 +1625,7 @@ func_dos_umb:
 ;
 	mov	hidos,TRUE		; update hidos flag to be ON
 	or	buffersIn,BUFFERS_IN_UMB; enable UMB usage for buffers
-	or	filesIn,FILES_IN_UMB	; and files
+;	or	filesIn,FILES_IN_UMB	; and files
 	or	stacksIn,STACKS_IN_UMB	; and stacks
 	or	lastdrvIn,LASTDRV_IN_UMB; and LDT
 	call	initialise_dmd_upper	; build initial upper memory DMD

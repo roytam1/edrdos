@@ -15,6 +15,8 @@ PCM_CODE	cseg	byte
 	extrn	fdos_diskinfo:near
 	extrn	fdos_nocrit:near
 	extrn	mul32:near
+	extrn	return_AX_CLC:near
+	extrn	error_exit:near
 
 	public	func73
 func73:
@@ -48,22 +50,22 @@ func7302:
 	 jae	f7302_10
 	mov	ax,18h			; return 18h (bad request structure length)
 	stc
-	jmp	f7302_exit		; no, then exit with error
+	jmp	error_exit		; no, then exit with error
 f7302_10:
 	xor	dh,dh
 	call	fdos_DISKINFO		; get drive info, ES:BX -> DDSC
 	 jnc	f7302_20
 	mov	ax,0fh			; return 0fh (invalid drive)
 	stc
-	jmp	f7302_exit		; error if invalid drive
+	jmp	error_exit		; error if invalid drive
 f7302_20:
 	push	ds
 	lds	bp,int21regs_ptr	; DS:DI -> Extended DPB structure
 	mov	di,ds:reg_DI[bp]
+	mov	ds,ds:reg_ES[bp]
 	mov	word ptr [di],EDPB_LEN	; length of data
 	inc	di			; skip to begin of EDPB
 	inc	di
-	mov	ds,ds:reg_ES[bp]
 	push	ds
 	push	es
 	pop	ds
@@ -80,11 +82,12 @@ f7302_20:
 	mov	cx,DDSC_FSVER-DDSC_BFREE
 	rep	movsb
 	pop	ds
-	push	ds
-	lds	bp,int21regs_ptr
+;	push	ds
+;	lds	bp,int21regs_ptr
+;	mov	ds:reg_AX[bp],ax	; return AX
+;	pop	ds
 	xor	ax,ax
-	mov	ds:reg_AX[bp],ax	; return AX
-	pop	ds
+	call	return_AX_CLC
 	clc
 f7302_exit:
 	ret
@@ -110,7 +113,7 @@ func7303:
 	 jnc	f7303_10
 	mov	ax,0fh			; return 0fh (invalid drive)
 	stc
-	jmp	f7303_exit		; error if invalid drive
+	jmp	error_exit		; error if invalid drive
 f7303_10:
 	mov	dl,al			; drive number
 	inc	dl
@@ -119,13 +122,13 @@ f7303_10:
 	 jnc	f7303_20
 	mov	ax,0fh			; return 0fh (invalid drive)
 	stc
-	jmp	f7303_exit		; error if invalid drive
+	jmp	error_exit		; error if invalid drive
 f7303_20:
 	cmp	cx,FREED_LEN		; enough buffer space for data?
 	 jbe	f7303_30
 	mov	ax,18h			; return 18h (bad request structure length)
 	stc
-	jmp	f7303_exit		; no, then exit with error
+	jmp	error_exit		; no, then exit with error
 f7303_30:
 	push	ds
 	lds	bp,int21regs_ptr	; DS:DI -> free space structure
@@ -151,7 +154,8 @@ f7303_30:
 	mov	word ptr FREED_FREEPCL[di],ax
 	mov	word ptr FREED_FREECL+2[di],dx
 	mov	word ptr FREED_FREEPCL+2[di],dx
-	mov	ax,es:DDSC_NCLSTRS[bx]	; total clusters on drive (16-bit)
+	mov	ax,es:DDSC_NCLSTRS[bx]	; highest cluster on drive (16-bit)
+	dec	ax			; total clusters (16-bit)
 	mov	word ptr FREED_NCLUSTER[di],ax
 	mov	word ptr FREED_NPCLUS[di],ax
 	mov	word ptr FREED_NCLUSTER+2[di],dx
@@ -164,12 +168,14 @@ f7303_40:
 	mov	ax,es:word ptr DDSC_BFREE+2[bx]
 	mov	word ptr FREED_FREECL+2[di],ax
 	mov	word ptr FREED_FREEPCL+2[di],ax
-	mov	ax,es:word ptr DDSC_BCLSTRS[bx]	; total clusters on drive (32-bit)
+	mov	ax,es:word ptr DDSC_BCLSTRS[bx]	; highest cluster on drive (32-bit)
+	mov	dx,es:word ptr DDSC_BCLSTRS+2[bx]
+	sub	ax,1				; total clusters (32-bit)
+	sbb	dx,0
 	mov	word ptr FREED_NCLUSTER[di],ax
 	mov	word ptr FREED_NPCLUS[di],ax
-	mov	ax,es:word ptr DDSC_BCLSTRS+2[bx]
-	mov	word ptr FREED_NCLUSTER+2[di],ax
-	mov	word ptr FREED_NPCLUS+2[di],ax
+	mov	word ptr FREED_NCLUSTER+2[di],dx
+	mov	word ptr FREED_NPCLUS+2[di],dx
 f7303_50:
 	push	word ptr FREED_FREEPCL+2[di]	; number of free physical clusters
 	push	word ptr FREED_FREEPCL[di]
@@ -194,11 +200,12 @@ f7303_50:
 	mov	word ptr FREED_NSECS+2[di],ax
 	add	sp,12			; clean up the stack again
 	pop	ds
-	push	ds
-	lds	bp,int21regs_ptr
+;	push	ds
+;	lds	bp,int21regs_ptr
+;	mov	ds:reg_AX[bp],ax	; return AX
+;	pop	ds
 	xor	ax,ax
-	mov	ds:reg_AX[bp],ax	; return AX
-	pop	ds
+	call	return_AX_CLC
 	clc
 f7303_exit:
 	ret

@@ -2057,6 +2057,8 @@ bpb2ddsc43:
 	rcr	ax,1
 	loop	bpb2ddsc43
 bpb2ddsc44:
+	add	ax,1			; +1 to get number of highest cluster
+	adc	dx,0
 	mov	es:word ptr DDSC_BCLSTRS[di],ax
 	mov	es:word ptr DDSC_BCLSTRS+2[di],dx
 	xor	ax,ax
