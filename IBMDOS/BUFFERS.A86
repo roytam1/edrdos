@@ -1479,6 +1479,7 @@ flush_buf9:				; all done, CY = 0 if O.K.
 zeroblk:				; DX:AX = blk
 ;-------
 	xor	bx,bx			; Start at begining of cluster
+	xor	cx,cx
 	call	clus2sec		; translate to sector address
 	xchg	ax,dx			; AX:DX = 32 bit sector address
 ;	mov	ah,al			; AH:DX = 24 bit sector address

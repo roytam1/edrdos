@@ -158,6 +158,7 @@ cfg_ex10:
 
 	call	SetupDeblocking		; do our thing with deblocking
 
+	mov	byte ptr configPass,1
 	call	config_finish		; clean up configuration
 	call	setup_fopen		; allocate disk hashing
 	call	setup_history
@@ -669,6 +670,7 @@ resident_ddscs:
 ; Allocate DDSC's for the resident device drivers - we can only do this
 ; after the DOS data area is established.
 ;
+	push	word ptr res_ddsc_ptr
 	sub	bx,bx			; start with 1st block device
 	mov	cx,num_blkdev		; get # of block devices
 	 jcxz	res_ddsc40		; skip if no block devices
@@ -705,6 +707,7 @@ res_ddsc20:				; CX = remaining units
 	inc	bx
 	loop	res_ddsc10		; repeat for next driver
 res_ddsc40:				; all block devices done
+	pop	word ptr res_ddsc_ptr
 	ret
 
 	
@@ -892,7 +895,10 @@ cfg_fin10:
 	les	bx,func52_ptr		; ES:BX -> base of DOS variables
 	call	setup_drives		; Update No of Physical Drives in case
 					; this is the first pass
+	cmp	byte ptr configPass,1
+	 je	cfg_fin20
 	call	setup_ldt		; setup the ldt's
+cfg_fin20:
 	les	bx,func52_ptr
 	lea	di,F52_CLKDEV[bx]	; ES:DI -> clock ptr, console ptr
 	mov	si,offset clkdev_off	; DS:SI -> local pointer values
@@ -1101,7 +1107,8 @@ setup_drives:
 	push	es ! push bx
 	les	bx,func52_ptr		; ES:BX -> base of DOS variables
 	mov	es:F52_PHYDRV[bx],al	; set # of Physical drives installed
-	mov	es:F52_LASTDRV[bx],al	; set # of Logical drives installed
+;	mov	es:F52_LASTDRV[bx],al	; set # of Logical drives installed
+	mov	es:F52_LASTDRV[bx],26	; set # of Logical drives installed
 	pop	bx ! pop es
 	ret
 
@@ -1301,7 +1308,6 @@ INITDATA	DSEG 'INITDATA'
 
 
 
-
 include	initmsgs.def				; Include TFT Header File
 
 
@@ -1452,5 +1458,7 @@ deblockSeg		dw	0
 	Public	DeblockSetByUser
 DeblockSetByUser	db	FALSE
 
+	Public	configPass
+configPass		db	0
 
 	end

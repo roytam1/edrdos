@@ -80,7 +80,7 @@ INIT_COMSPEC	equ	0002h		; COMSPEC_DRV specifies the default
 INIT_WINDOWS	equ	0004h		; Disable windows support
 
 COMMAND_BASE	equ	000E0h		; must cover FFFF:D0 for CALL5 fixup
-COMMAND_SIZE	equ	015C0h
+COMMAND_SIZE	equ	01680h
 
 CGROUP	GROUP	CODE, INITCODE, INITDATA, INITPSP, INITENV, DATAEND
 CODE	CSEG
@@ -317,9 +317,13 @@ dos_reloc:
 	xor	ax,ax
 	mov	es,ax			; ES -> interrupt vectors
 	mov	ax,ds:DOS_DATA		; get # of bytes of DOS data
+	mov	cs:dosdata_len,ax
+	add	ax,15
 	shr	ax,cl			; get para size of DOS data
-	xchg	ax,cs:free_seg		; get seg for DOS data
-	add	cs:free_seg,ax		; remember how much we used
+	sub	cs:mem_max,ax
+	mov	ax,cs:mem_max
+;	xchg	ax,cs:free_seg		; get seg for DOS data
+;	add	cs:free_seg,ax		; remember how much we used
 	mov	es:INT31_SEGMENT,ax	; update the segment value of INT31
 	mov	es,ax			;  so ROMMED systems can find PCM_DSEG
 	mov	cs:dos_dseg,ax		; we need to remember where too...
@@ -358,13 +362,17 @@ dos_r40:
 	push cs ! pop ds
 	push cs ! pop es
 
+	mov	cl,dev_count
+	mov	res_dev_count,cl
 	mov	cl,4			; reserve space for resident DDSC's
 	mov	ax,DDSC_LEN
 	mul	dev_count		; AX byte are required
 	add	ax,15
 	shr	ax,cl			; AX para are required
-	xchg	ax,free_seg
-	add	free_seg,ax		; we have allocated the space
+	sub	mem_max,ax
+	mov	ax,mem_max
+;	xchg	ax,free_seg
+;	add	free_seg,ax		; we have allocated the space
 	mov	res_ddsc_seg,ax		; point res_ddsc_ptr at the space
 	mov	dx,dos_dseg
 	sub	ax,dx			; DOS resident DDSC_'s use DOS data seg
@@ -375,6 +383,10 @@ dos_r40:
 	mov	res_ddsc_seg,dx		; setup pointer to resident DDSC's
 dos_r50:
 
+	mov	ax,free_seg		; reserve space for interrupt stubs
+	mov	int_stubs_seg,ax
+	add	free_seg,11
+
 ;
 ;	Call the DOS INIT Code passing all the information setup
 ;	by the BIOS.
@@ -382,6 +394,7 @@ dos_r50:
 	mov	ax,mem_size		; pass the Memory Size, the first free
 	mov	bx,free_seg		;  segment and the initial 
 	mov	dl,init_drv		;  drive to the DOS init routine
+	mov	es,int_stubs_seg
 	cli
 	mov	ds,dos_dseg		; DS -> DOS data segment
 	callf	cs:dos_init
@@ -528,6 +541,7 @@ endif
 	mov	mem_current_base,ax	; Base of allocated memory
 	mov	mem_current,ax		; Next available Segment
 
+	mov	byte ptr configPass,0
 	call	config_finish		; Update DOS with the information
 					; obtained from loading the resident
 					; drivers.
@@ -580,11 +594,33 @@ config_end10:
 	mov	dl,'L'			; allocate LDT's
 	mov	dh,lastdrvIn
 	call	alloc_instseg		; Allocate memory AX is destination
+
+	push	di
+	push	ax
+	xchg	ax,cx
+	mov	al,LDT_LEN
+	mov	ah,es:F52_LASTDRV[bx]
+	cmp	ah,26
+	 jbe	config_end20
+	mov	ah,26
+config_end20:
+	mul	ah
+	xchg	ax,cx
+	push	ds
+	push	es
+	lds	si,es:F52_PATHPTR[bx]
+	mov	es,ax
+	rep	movsb
+	pop	es
+	pop	ds
+	pop	ax
+	pop	di
+
 	mov	es:F52_PATHOFF[bx],di	; point at the LDT's
 	mov	es:F52_PATHSEG[bx],ax	; save seg we just allocated
 	pop	es
 
-	call	setup_ldt		; initialise LDT structures
+;	call	setup_ldt		; initialise LDT structures
 
 	call	setup_stacks		; allocate stacks
 
@@ -685,10 +721,12 @@ relocate_system:
 relocate_system10:
 	call	reloc_bios		; move down relocatable drivers
 	call	reloc_dos		; move DOS above drivers if RAM based
+	call	reloc_dosdata
 	xor	cx,cx
 	xchg	cx,commandHMA
 	call	FreeHMA			; return command.com HMA space to pool
 	cli
+	mov	es,int_stubs_seg
 	mov	ds,dos_dseg		; DS -> DOS data segment
 	callf	cs:dos_init		; (in case of CS relative fixups)
 	sti
@@ -726,16 +764,16 @@ reloc_dos10:
 	 jnc	reloc_dos40		;  in upper memory if possible
 reloc_dos20:
 	mov	es,current_dos		; if conventional memory we
-	mov	ax,es:INIT_CODE		;  can discard INIT code
-	cmp	history_flg,0		; is history enabled ?
-	 jne	reloc_dos30
-	mov	ax,es:HISTORY_CODE	; no, discard history code as well
-reloc_dos30:
-	push	cx
-	add	ax,15
-	mov	cl,4			; convert to paragraphs
-	shr	ax,cl
-	pop	cx
+;	mov	ax,es:INIT_CODE		;  can discard INIT code
+;	cmp	history_flg,0		; is history enabled ?
+;	 jne	reloc_dos30
+;	mov	ax,es:HISTORY_CODE	; no, discard history code as well
+;reloc_dos30:
+;	push	cx
+;	add	ax,15
+;	mov	cl,4			; convert to paragraphs
+;	shr	ax,cl
+;	pop	cx
 	call	alloc_seg_with_padding	; allocate in conventional memory
 reloc_dos40:
 	xchg	ax,dx			; save segment address
@@ -765,7 +803,93 @@ reloc_dos90:				; fixups performed
 	pop	ds
 	ret
 
+reloc_dosdata:
+	push	es
 
+	mov	ax,DDSC_LEN
+	mul	res_dev_count
+	push	ax
+	test	hiddscs,DDSCS_IN_HMA
+	 jz	reloc_data20
+	push	es
+	push	ax
+	call	SetupHMA
+	pop	cx
+	mov	dx,0ffffh
+	call	AllocHMA
+	 jc	reloc_data10
+	mov	ax,es
+	pop	es
+	jmps	reloc_data50
+reloc_data10:
+	pop	es
+reloc_data20:
+	pop	ax
+	push	ax
+	mov	cl,4
+	add	ax,15
+	shr	ax,cl
+	mov	dl,'M'
+	test	hiddscs,DDSCS_IN_UMB
+	 jz	reloc_data30
+	call	alloc_hiseg
+	 jnc	reloc_data40
+reloc_data30:
+	call	alloc_seg
+reloc_data40:
+	xor	di,di
+reloc_data50:
+	mov	es,ax
+	pop	cx
+	mov	dx,di
+	push	ds
+	lds	si,res_ddsc_ptr
+	rep	movsb
+	pop	ds
+	mov	di,dx
+;	xor	di,di
+	mov	cl,res_dev_count
+	dec	cl
+reloc_data60:
+	mov	es:word ptr DDSC_LINK[di],di
+	add	es:word ptr DDSC_LINK[di],DDSC_LEN
+	mov	es:word ptr DDSC_LINK+2[di],ax
+	add	di,DDSC_LEN
+	loop	reloc_data60
+	mov	res_ddsc_seg,ax
+	mov	res_ddsc_off,dx
+	les	bx,func52_ptr
+	mov	es:word ptr F52_DDSCPTR+2[bx],ax
+	mov	es:word ptr F52_DDSCPTR[bx],dx
+
+	mov	ax,dosdata_len
+	mov	cl,4
+	add	ax,15
+	shr	ax,cl
+	mov	dl,'M'
+	test	hidosdata,DOSDATA_IN_UMB
+	 jz	reloc_data70
+	call	alloc_hiseg
+	 jnc	reloc_data80
+reloc_data70:
+	call	alloc_seg
+reloc_data80:
+	mov	cx,dosdata_len
+	mov	es,ax
+	xor	di,di
+	xor	si,si
+	push	ds
+	mov	ds,dos_dseg
+	rep	movsb
+	pop	ds
+	mov	dos_dseg,ax
+	mov	drdos_seg,ax
+	xor	di,di
+	mov	es,di
+	mov	es:INT31_SEGMENT,ax
+
+	pop	es
+	ret
 
 	Public	HookInt2F
 
@@ -1379,12 +1503,12 @@ mark_sm30:
 	cmp	es:DMD_PSP,0008		; if system mark as SC
 	 jne	mark_sm40
 	xor	ax,ax			; zero rest for cosmetic reasons
-	mov	ds:word ptr DMD_NAME-3,ax
-	mov	ds:word ptr DMD_NAME-2,ax
-	mov	ds:word ptr DMD_NAME,'S'+256*'C'
-	mov	ds:word ptr DMD_NAME+2,ax
-	mov	ds:word ptr DMD_NAME+4,ax
-	mov	ds:word ptr DMD_NAME+6,ax
+	mov	es:word ptr DMD_NAME-3,ax
+	mov	es:word ptr DMD_NAME-2,ax
+	mov	es:word ptr DMD_NAME,'S'+256*'C'
+	mov	es:word ptr DMD_NAME+2,ax
+	mov	es:word ptr DMD_NAME+4,ax
+	mov	es:word ptr DMD_NAME+6,ax
 mark_sm40:
 	cmp	es:DMD_ID,'Z'		; is it the last DMD ?
 	 je	mark_sm50		;  then stop
@@ -1627,6 +1751,7 @@ include	initmsgs.def				; Include TFT Header File
 	extrn	next_drv:byte
 	extrn	dev_count:byte
 	extrn	lastdrvIn:byte
+	extrn	configPass:byte
 
 ;
 ;	PUBLIC Variables which are initialised by the BIOS before the
@@ -1752,6 +1877,11 @@ hidos		db	0		; set true if HIDOS requested
 himem_base	dw	0		; base of HIMEM seg allocations
 himem_size	dw	0		; length of HIMEM seg allocations
 
+	Public	hidosdata
+hidosdata	db	0
+	Public	hiddscs
+hiddscs		db	0
+
 	Public	last_drv
 
 last_drv	db	5		; default is "E:"
@@ -1804,6 +1934,9 @@ search_state	rb	43		; Search First/Next State
 		rw	384		; big stack for ASPI4DOS.SYS driver
 stack		rw	0
 
+res_dev_count	db	0
+dosdata_len	dw	0
+int_stubs_seg	dw	0
 
 INITPSP		DSEG	PARA 'INITDATA'
 		db	'Z'			; dummy DMD header

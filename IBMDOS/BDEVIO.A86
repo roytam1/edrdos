@@ -207,7 +207,7 @@ byteoff		dw	0		; fdosrw local variable
 
 blk		dw	0,0		; current cluster of filepos
 blkidx		dw	0,0		; current cluster index within file
-blkoffset	dw	0		; offset within cluster
+blkoffset	dw	0,0		; offset within cluster
 
 fdrw_seek_cl	dw	0,0
 fdw_trunc_cl	dw	0,0
@@ -399,10 +399,15 @@ fdw_trunc:
 ;
 
 	les	bx,current_dhndl
-	mov	cx,blkoffset		; get offset within current block
+;	mov	cx,blkoffset		; get offset within current block
 	mov	ax,blkidx		; get logical block number
 	mov	dx,blkidx+2
-	 jcxz	fdw_t10			; skip if no data in last block
+	cmp	blkoffset,0		; get offset within current block
+;	 jcxz	fdw_t10			; skip if no data in last block
+	 jnz	fdw_t05			; skip if no data in last block
+	cmp	blkoffset+2,0
+	 jz	fdw_t10
+fdw_t05:
 ;	inc	ax			; else add in another cluster
 	add	ax,1			; else add in another cluster
 	adc	dx,0
@@ -548,7 +553,8 @@ fdrw_p20:
 	sub	sp,8			; reserve space on stack
 	call	div32
 	pop	word ptr blkoffset	; offset within cluster
-	add	sp,2			; skip high word
+	pop	word ptr blkoffset+2
+;	add	sp,2			; skip high word
 	pop	word ptr blkidx		; save it for later
 	pop	word ptr blkidx+2
 	add	sp,8			; clean up stack
@@ -774,7 +780,8 @@ fdrw_seek:
 	sub	sp,8			; reserve space on stack for result
 	call	div32
 	pop	word ptr blkoffset	; save cluster and offset within it
-	add	sp,2
+	pop	word ptr blkoffset+2
+;	add	sp,2
 	pop	word ptr blkidx
 	pop	word ptr blkidx+2
 	add	sp,8			; clean up stack
@@ -851,6 +858,7 @@ fdrw_seek40:
 	mov	blk,ax			; save the block for coniguous checks
 	mov	blk+2,dx
 	mov	bx,blkoffset
+	mov	cx,blkoffset+2
 	call	clus2sec		; convert to sector/offset
 	mov	word ptr fdrwsec,ax	; remember this block
 	mov	word ptr fdrwsec+WORD,dx
@@ -924,11 +932,15 @@ direct_rw:
 	sub	dx,dx			; assume no extra blocks required
 	mov	ax,fdrwreq		; total byte count
 	mov	cx,clsize		; get number of bytes
-	sub	cx,blkoffset		; CX = bytes remaining in this block
+	mov	bx,clsize+2
+	sub	cx,blkoffset		; BX:CX = bytes remaining in this block
+	sbb	bx,blkoffset+2
 	sub	ax,cx			; if wholly containined within block
-	 jbe	direct_rw10		; then leave it alone
+	sbb	dx,bx
+;	 jbe	direct_rw10		; then leave it alone
+	 jnc	direct_rw10		; then leave it alone
 ;	div	clsize			; else get # of extra clusters
-	push	cx
+;	push	cx
 	push	dx
 	push	ax
 	push	word ptr clsize+2
@@ -939,7 +951,7 @@ direct_rw:
 	add	sp,2
 	pop	ax
 	add	sp,10
-	pop	cx
+;	pop	cx
 	xchg	ax,dx			; DX = clusters, AX = remainder
 	or	ax,ax			; round up if any remainder
 	 jz	direct_rw10		; skip if even number
@@ -959,7 +971,7 @@ direct_rw10:				; DX = # of contiguous clusters req'd
 	pop	dx
 	add	sp,12
 	sub	ax,blkoffset		; BX = skipped bytes in 1st cluster
-	sbb	dx,0
+	sbb	dx,blkoffset+2
 					; AX:DX = max # of bytes transferrable
 					;    from current position
 	test	dx,dx
@@ -1749,7 +1761,7 @@ clus2sec:		; convert from cluster/offset to sector/offset
 ;--------
 ; On Entry:
 ;	DX:AX = cluster
-;	BX = byte offset in cluster
+;	CX:BX = byte offset in cluster
 ; On Exit:
 ;	DX:AX = sector
 ;	BX = byte offset in sector
@@ -1759,7 +1771,8 @@ clus2sec:		; convert from cluster/offset to sector/offset
 	sbb	dx,0
 	push	dx			; save cluster on stack
 	push	ax
-	xor	dx,dx
+;	xor	dx,dx
+	xchg	dx,cx
 	xchg	ax,bx			; DX:AX = byte offset
 	div	psecsiz			; AX = sector offset, DX = byte offset
 	mov	bx,dx			; BX = byte offset in sector

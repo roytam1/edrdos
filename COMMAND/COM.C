@@ -1212,10 +1212,10 @@ BOOLEAN   internal;		/* Search for INTERNAL Commands */
 	REG S_CMD FAR *s_cmd_p;
 	WORD	  i;
 	BYTE FAR  *cpf;
-	BYTE 	  loadfile[MAX_FILELEN];
+	static BYTE	loadfile[MAX_FILELEN];
 	BYTE	  *cp1, *lcp;
 	UWORD	  loadtype;
-	BYTE	  argv0[MAX_FILELEN];
+	static BYTE	argv0[MAX_FILELEN];
 
 	heap_get(0);				/* check for stack overflow */
 	lcp = cp;				/* in case 1st parse fails.. */

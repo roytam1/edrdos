@@ -75,6 +75,20 @@
   command line
 - added new experimental config.sys command VERSION=x.x to allow to change the
   global version setting
+(30.8.2004):
+- added support for block device drivers that are loaded with INSTALL in
+  config.sys by increasing the number of drive letters available at boot time
+  and copying the temporary logical drive table into the final one
+- made some arrays in command.com static to keep nested IF commands in batch
+  files from overflowing the stack
+- added experimental support for drives with 128 KB cluster size (sectors per
+  cluster in boot sector = 0)
+- added new code to allow DDSC structures to be relocated to upper or high
+  memory, added new config.sys command DDSCS=HIGH,UMB to configure this feature
+  (default is DDSCS=LOW)
+- added new code to also allow the DOS data segment to be relocated to upper
+  memory, added new config.sys command DOSDATA=UMB to activate this (default is
+  DOSDATA=LOW)
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

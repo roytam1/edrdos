@@ -1914,8 +1914,10 @@ bpb2ddsc02:
 	lodsw				; get sector size in bytes
 	mov	es:DDSC_SECSIZE[di],ax
 
+	xor	ax,ax
 	lodsb				; get sectors/allocation unit
-	dec	ax			; get cluster mask
+;	dec	ax			; get cluster mask
+	dec	al			; get cluster mask
 	mov	es:DDSC_CLMSK[di],al	; store cluster mask
 	lodsw				; get FAT address
 	mov	es:DDSC_FATADDR[di],ax

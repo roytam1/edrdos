@@ -3007,7 +3007,8 @@ hd_bpb20:				; cluster size determined
 	sbb	dx,0			; (note: 32 bytes per entry)
 	xor	cx,cx
 	mov	ch,BPB_ALLOCSIZ[bx]	; CX = (256 * # of clusters on drive)
-	dec	cx
+;	dec	cx
+	dec	ch
 	add	ax,cx			; add in for rounding error
 	adc	dx,0
 	inc	cx
