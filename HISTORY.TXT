@@ -1,3 +1,28 @@
+7.01.06:
+- added support for FAT32 partition types and boot records to disk device
+  driver
+- expanded sector numbers in buffer management routines from 24 to 32 bit to
+  allow partitions larger than 8 GB
+- added FAT32 specific entries to DR-DOS file system structures
+- rewrote most file system routines to cope with 32-bit cluster numbers and
+  dynamic root directories (FAT32)
+- added support for FAT32 file system info block to store free disk space
+  to speed up disk access
+- changed the free disk space routine to use dynamic cluster sizes on FAT32
+  partitions to report free space more accurately
+- added a routine to command.com to display large numbers with thousands
+  delimiters, changed dir command to use it
+- fixed bugs in the boot routine to allow booting from 64 KB cluster
+  partitions
+- fixed bug that caused command.com not to terminate the PSP chain at the
+  master PSP, leading to all kinds of problems with the environment space
+- fixed bug in dir command that caused the free disk space on partitions with
+  64 KB clusters to be displayed as zero
+- fixed bug in LBA routines that caused writing problems on some systems, this
+  may also speed up writing on other systems
+- increased heap space in command.com to prevent corruption of command line
+  arguments while processing deeply nested batch files
+
 7.01.05:
 - some preliminary changes for 32-bit file system support
 - added support for 4 GB FAT16 partitions (64 KB cluster size)

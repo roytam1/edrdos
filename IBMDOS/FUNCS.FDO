@@ -1889,12 +1889,15 @@ fdos_mkddsc:
 	les	di,6[si]		; ES:DI -> DDSC
 	lds	si,2[si]		; DS:SI -> BPB
 
-	call	bpb2ddsc		; convert BPB to DDSC
+;	call	bpb2ddsc		; convert BPB to DDSC
+	call	bpb2ddsc_noext		; convert BPB to normal DDSC (without extended drive info)
 	xor	bx,bx			; no error
 	pop	ds			; restore segment register
 	ret
 
-
+bpb2ddsc_noext:
+	mov	bl,0			; do not build extended DDSC
+	jmps	bpb2ddsc02
 bpb2ddsc:
 ;--------
 ; build a DDSC from a BPB, leavinf UNIT, RUNIT, DEVICE, FIRST, and LINK fields
@@ -1904,6 +1907,8 @@ bpb2ddsc:
 ;	ES:DI -> destination DDSC
 ; On Exit:
 ;	None
+	mov	bl,1			; build extended DDSC (default case)
+bpb2ddsc02:
 	lodsw				; get sector size in bytes
 	mov	es:DDSC_SECSIZE[di],ax
 
@@ -1993,9 +1998,13 @@ bpb2ddsc30:				; CL = log2 (CH)
 
 	cmp	es:DDSC_DIRENT[di],0	; is this an extended BPB?
 	 je	bpb2ddsc40		; yes
-	 jmp	bpb2ddsc50
+	jmp	bpb2ddsc50
 
 bpb2ddsc40:
+	cmp	bl,1			; build extended DDSC?
+	 jz	bpb2ddsc41		; yes, proceed with extended info
+	jmp	bpb2ddsc50		; no, then skip the rest
+bpb2ddsc41:
 	lodsw				; get low word of sectors per FAT
 	mov	es:word ptr DDSC_BFATRECS[di],ax
 	lodsw				; get high word
@@ -2028,9 +2037,9 @@ bpb2ddsc40:
 	mov	es:word ptr DDSC_BDATADDR+2[di],dx
 	mov	es:word ptr DDSC_DATADDR[di],ax	; use 16-bit field as well
 	cmp	dx,0			; does this fit into 16-bit
-	 je	bpb2ddsc41		; yes, then leave it
+	 je	bpb2ddsc42		; yes, then leave it
 	mov	es:word ptr DDSC_DATADDR[di],0	; else mark this entry as invalid
-bpb2ddsc41:
+bpb2ddsc42:
 	mov	ax,-18[si]		; get low word of size
 	mov	dx,-16[si]		; get high word of size
 	sub	ax,es:DDSC_BDATADDR[di]	; subtract non-data portion
@@ -2038,12 +2047,12 @@ bpb2ddsc41:
 	xor	cx,cx
 	mov	cl,es:DDSC_CLSHF[di]	; cluster shift value
 	test	cl,cl			; cluster size one?
-	 jz	bpb2ddsc43
-bpb2ddsc42:
+	 jz	bpb2ddsc44
+bpb2ddsc43:
 	shr	dx,1			; divide by two
 	rcr	ax,1
-	loop	bpb2ddsc42
-bpb2ddsc43:
+	loop	bpb2ddsc43
+bpb2ddsc44:
 	mov	es:word ptr DDSC_BCLSTRS[di],ax
 	mov	es:word ptr DDSC_BCLSTRS+2[di],dx
 	xor	ax,ax

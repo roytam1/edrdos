@@ -36,3 +36,30 @@ contain valuable data. Also, please note that many disk tools do not expect to
 see this feature on a DOS based machine, so they most likely do not support it.
 Windows NT and FreeDOS support it, so tools written for these operating systems
 should be safe to use.
+
+In version 7.01.06 I have introduced support for the FAT32 file system to
+DR-DOS. This is quite an advancement and was requested by many users, but has
+also led to a number of problems. Some of these will probably be fixed in one
+of the next patches, but to others there is currently no simple solution.
+- The file info block which contains info about the free space on a FAT32
+  partition is not updated when the amount of free space changes. This affects
+  MS-DOS and possibly Windows, but otherwise it is not a big problem.
+- DOS reports the free space on a partition in clusters; this value is per
+  definition a 16-bit number. So on large partitions with small cluster sizes,
+  a program could complain about not having enough space when there is still
+  enough available. I will probably fix this in the next release.
+- The number of sectors per FAT is currently a 16-bit value; however, on very
+  large partitions with very small clusters, this could become critical.
+  Theoretically, with 128 FAT entries per sector, two FAT copies and 65535 FAT
+  sectors, this limit would be reached at 2^22 clusters. This would not be very
+  difficult to fix, however, I currently do not have the means to verify this
+  on my test PC. If anyone wants to test this, I would be very interested in
+  the results.
+- Chkdsk does no longer work on hard disk partitions, whether they are FAT16
+  or FAT32, even though MS Scandisk and Partition Magic 8.0 do not report any
+  problems. The reason for this is currently unknown to me. The disk utilities
+  Delwatch and Superstor/Stacker do not support 32-bit cluster numbers and thus
+  will not work on FAT32 partitions, and there is a good chance that support
+  for them is broken on FAT12/16 as well. I would generally advise against
+  using them until someone has tested them and it has been found that they are
+  safe to use with this patch.
