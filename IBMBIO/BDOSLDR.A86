@@ -611,15 +611,19 @@ next_cluster6:
 	mov	cx,word ptr sector_buffer[bx]
 					; get 16 bit from FAT
 	xor	bp,bp
+	cmp	fattype,2		; is this FAT32?
+	 jne	next_cluster7		; no, skip high word
+	mov	bp,word ptr sector_buffer+2[bx]
+					; get high 16 bit from FAT
+	and	bp,0FFFh		; mask out reserved high nibble
+next_cluster7:
 	cmp	cx,0FFF7h		; check if too large for #
 ;	 jae	next_cluster_eof	; set carry, EOF
 	 jb	next_cluster9
-	cmp	fattype,2		; is this FAT32?
-	 jne	next_cluster_eof	; set carry, EOF
-	mov	bp,word ptr sector_buffer+2[bx]
-					; get high 16 bit from FAT
-	cmp	bp,0FFFFh		; and also check high word
-	 je	next_cluster_eof
+	cmp	fattype,2		; FAT32?
+	 jne	next_cluster_eof	; no, then it is already EOF
+	cmp	bp,0FFFh		; else also check high word
+	 je	next_cluster_eof	; set carry, EOF
 next_cluster9:
 	clc
 	jmps	next_cluster_ret	; good link

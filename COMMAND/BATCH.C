@@ -2281,7 +2281,8 @@ BYTE	*dst;
 
 	while(n_cmd_p->string) {
 
-	    cpf = cgroupptr(n_cmd_p->string);
+/*	    cpf = cgroupptr(n_cmd_p->string);*/
+	    cpf = (BYTE FAR*)n_cmd_p->string;
 
 	    for(i=0; (cpf[i]==src[i]) && src[i]; i++);
 
@@ -2527,6 +2528,16 @@ BYTE	*dst;
 	sprintf(dst,"%02d",time.hour);
 }
 
+GLOBAL	VOID CDECL get_hour2(dst)
+BYTE	*dst;
+{
+	SYSTIME  time;
+		
+	ms_gettime(&time);
+
+	sprintf(dst,"%d",time.hour);
+}
+
 GLOBAL	VOID CDECL get_minute(dst)
 BYTE	*dst;
 {
@@ -2611,6 +2622,16 @@ BYTE	*dst;
 	sprintf(dst,"%d",date.month);
 }
 
+GLOBAL	VOID CDECL get_moy(dst)
+BYTE	*dst;
+{
+	SYSDATE	date;
+	
+	ms_getdate(&date);
+	
+	sprintf(dst,"%02d",date.month);
+}
+
 GLOBAL	VOID CDECL get_month_name(dst)
 BYTE	*dst;
 {
@@ -2648,6 +2669,16 @@ BYTE	*dst;
 	ms_getdate(&date);
 	
 	sprintf(dst,"%d",date.day);
+}
+
+GLOBAL	VOID CDECL get_dom(dst)
+BYTE	*dst;
+{
+	SYSDATE	date;
+	
+	ms_getdate(&date);
+	
+	sprintf(dst,"%02d",date.day);
 }
 
 GLOBAL	VOID CDECL get_nday_of_week(dst)
@@ -2688,4 +2719,54 @@ BYTE	*dst;
 	}
 	
 	sprintf(dst,"%d",i);
+}
+
+GLOBAL	VOID CDECL get_errorlevel(dst)
+BYTE	*dst;
+{
+	sprintf(dst,"%d",err_ret & 255);
+}
+
+GLOBAL	VOID CDECL get_errorlvl(dst)
+BYTE	*dst;
+{
+	sprintf(dst,"%03d",err_ret & 255);
+}
+
+GLOBAL	VOID CDECL get_codepage(dst)
+BYTE	*dst;
+{
+	UWORD	currentcp,defaultcp;
+
+	ms_x_getcp(&currentcp,&defaultcp);
+
+	sprintf(dst,"%d",currentcp);
+}
+
+GLOBAL	VOID CDECL get_country(dst)
+BYTE	*dst;
+{
+	country.code=ms_s_country(&country);
+
+	sprintf(dst,"%d",country.code);
+}
+
+GLOBAL	VOID CDECL get_rows(dst)
+BYTE	*dst;
+{
+	UWORD	rows;
+
+	rows=get_lines_page();
+
+	sprintf(dst,"%d",rows);
+}
+
+GLOBAL	VOID CDECL get_columns(dst)
+BYTE	*dst;
+{
+	UWORD	columns;
+
+	columns=get_scr_width();
+
+	sprintf(dst,"%d",columns);
 }

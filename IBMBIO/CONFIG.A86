@@ -892,8 +892,8 @@ config_finish:		; finish off configuration
 	mov	resdev_off,-1		; only do this once...
 cfg_fin10:
 
-	cmp	byte ptr configPass,1	; skip if second pass
-	 je	cfg_fin20
+	cmp	byte ptr configPass,0	; skip if second pass
+	 jne	cfg_fin20
 	les	bx,func52_ptr		; ES:BX -> base of DOS variables
 	call	setup_drives		; Update No of Physical Drives in case
 					; this is the first pass

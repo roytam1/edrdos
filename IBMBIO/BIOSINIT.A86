@@ -111,13 +111,14 @@ INITCODE	CSEG	PARA 'INITCODE'
 	extrn	setup_ldt:near
 	extrn	setup_stacks:near
 	extrn	dos_version_check:near
+	extrn	preload_done:near
 
 		db	'Copyright (c) 1983,1996 '
 		db	'Caldera, Inc. All Rights Reserved '
 		db	'XXXX-0000-987654321X '
 
 		db	'Patches to original OpenDOS source code '
-		db	'Copyright (c) 2002-2004 Udo Kuhnt'
+		db	'Copyright (c) 2002-2005 Udo Kuhnt'
 
 
 	Public	biosinit
@@ -627,6 +628,10 @@ config_end20:
 	call	setup_stacks		; allocate stacks
 
 	call	relocate_system		; relocate system as requested
+
+	mov	configpass,2
+	mov	cfg_head,0
+	call	preload_done
 
 	push	es			; Free all of the unused memory
 	mov	es,mem_current_base	; ES: Base Allocated Memory
@@ -1876,6 +1881,7 @@ include	initmsgs.def				; Include TFT Header File
 	extrn	lastdrvIn:byte
 	extrn	configPass:byte
 	extrn	part_off:word
+	extrn	cfg_head:word
 
 ;
 ;	PUBLIC Variables which are initialised by the BIOS before the
@@ -1958,7 +1964,7 @@ code_page	dw	DEF_CODEPAGE	; Code Page
 IF DRDOS35
 dos_name	db	'DRBDOS  SYS',0 
 ELSE
-dos_name	db	'IBMDOS  COM',0	; default DOS filename
+dos_name	db	'DRDOS   SYS',0	; default DOS filename
 ENDIF
 
 rpl_name	db	'RPLOADER'

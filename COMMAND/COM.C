@@ -1250,7 +1250,8 @@ EXTERN	BYTE	  argv0[MAX_FILELEN];
 
 	s_cmd_p = (S_CMD FAR *)farptr((BYTE *)&cmd_list[0]);
 	while(internal && s_cmd_p->cmnd) {	/* while more builtins	*/
-	    cpf = cgroupptr(s_cmd_p->cmnd);
+/*	    cpf = cgroupptr(s_cmd_p->cmnd);*/
+	    cpf = (BYTE FAR*)s_cmd_p->cmnd;
 	    for(i=0;cpf[i];i++)			/* make upper case copy */
 	    	argv0[i]=toupper(cpf[i]);
 	    for(;i<8;argv0[i++]=' ');		/* space fill it to 8 */
@@ -1303,7 +1304,8 @@ EXTERN	BYTE	  argv0[MAX_FILELEN];
             show_help(0);
 	    s_cmd_p = (S_CMD FAR *)farptr((BYTE *)&cmd_list[0]);
 	    while(s_cmd_p->cmnd) {
-	        cpf = cgroupptr(s_cmd_p->cmnd);
+/*	        cpf = cgroupptr(s_cmd_p->cmnd);*/
+	        cpf = (BYTE FAR*)s_cmd_p->cmnd;
                 printf("%s\t",cpf);
 	        s_cmd_p++;
 	    }

@@ -856,9 +856,9 @@ getdrivegeo:				; get number of heads & sectors
 	xor	dl,dl			; isolate head bits
 	xchg	dh,dl
 	inc	dx
-	mov	max_head,dx		; number of heads on this drive
+	mov	cs:max_head,dx		; number of heads on this drive
 	and	cx,3fh			; isolate sector bits
-	mov	max_sect,cx		; number of sectors per track on this drive
+	mov	cs:max_sect,cx		; number of sectors per track on this drive
 	popx	<di,es,dx,cx>
 	ret
 
@@ -881,16 +881,16 @@ login_CHS2LBA:
 	rol	ah,1
 	mov	bl,dh			; isolate head bits
 	xor	bh,bh
-	mul	max_head		; multiply with number of heads
+	mul	cs:max_head		; multiply with number of heads
 	add	ax,bx			; add head number
 	adc	dx,0
 	push	ax
 	mov	ax,dx			; multiply with sectors per track
-	mul	max_sect
+	mul	cs:max_sect
 	mov	word ptr [si+10],ax
 	mov	word ptr [si+12],dx
 	pop	ax
-	mul	max_sect
+	mul	cs:max_sect
 	and	cx,3fh			; isolate sector bits
 	dec	cx
 	mov	word ptr [si+8],cx	; add products and sector number
@@ -914,14 +914,14 @@ login_LBA2CHS:
 	push	dx			; save unit number
 	mov	dx,0			; divide high word of LBA block number
 	mov	ax,word ptr [si+10]
-	div	max_sect
+	div	cs:max_sect
 	push	ax			; high word of quotient
 	mov	ax,word ptr [si+8]	; divide low word & remainder
-	div	max_sect
+	div	cs:max_sect
 	mov	cx,dx			; remainder = sector number
 	inc	cx			; sector count starts with 1
 	pop	dx			; get high word
-	div	max_head		; divide through number of heads
+	div	cs:max_head		; divide through number of heads
 	ror	ah,1			; convert cylinder and sector number to CHS format
 	ror	ah,1
 	xchg	ah,al
@@ -1692,17 +1692,17 @@ ioctl_rw_common:
 	mov	ax,ds:3[bx]		; get cylinder number
 	mov	P_CYL[bp],ax
 
-	mul	max_head		; multiply with number of heads
+	mul	cs:max_head		; multiply with number of heads
 	xor	ch,ch
 	mov	cl,P_HEAD[bp]
 	add	ax,cx			; add head number
 	adc	dx,0
 	push	ax
 	mov	ax,dx			; multiply with sectors per track
-	mul	max_sect
+	mul	cs:max_sect
 	mov	word ptr P_LBABLOCK[bp+2],ax
 	pop	ax
-	mul	max_sect
+	mul	cs:max_sect
 	xor	ch,ch
 	mov	cl,P_SECTOR[bp]
 	dec	cl
@@ -2257,6 +2257,9 @@ FullScreen10:
 
 driver	endp
 
+
+max_head	dw	0		; maximum number of heads
+max_sect	dw	0		; maximum sectors per track
 
 RCODE	ends				; end of device driver code
 
@@ -3080,9 +3083,6 @@ nfloppy		db	0		; # of floppy drives
 
 int13ex_ver	dw	0		; version of int 13 extensions
 int13ex_bits	dw	0		; int 13 API support bitmap
-
-max_head	dw	0		; maximum number of heads
-max_sect	dw	0		; maximum sectors per track
 
 ;	Public	diskaddrpack
 ;diskaddrpack:				; disk address packet structure for LBA access

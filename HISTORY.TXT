@@ -125,6 +125,26 @@
   to the interrupt stub during config.sys execution
 - fixed yet another bug from OpenDOS times that caused the RENAME command to
   corrupt the command.com stack if the new filename was longer than eight bytes
+(25.1.2005):
+- fixed a stupid bug present since v7.01.04 that referenced some internal LBA
+  variables via the wrong segment register, causing FORMAT to crash upon
+  completion in recent versions with DOSDATA relocation
+- introduced two new config.sys commands INSTALLLAST and HIINSTALLLAST that
+  load programs after the DOSDATA segment relocation to work around problems
+  with older programs that are incompatible with this feature when INSTALLed
+- enhanced the VERSION=x.xx,y.yy config.sys command to also allow setting the
+  True DOS Version as reported by function 3306h
+- fixed code in command.com module cmdlist to work with Watcom C; changed
+  default compiler for cmdlist from Borland C to Watcom C
+- added support for DR-DOS 7.03 internal vars %_YEAR%, %_MONTH%, %MOY%, %_DAY%,
+  %DOM%, %_DOW%, %_DOWI%, %_HOUR%, %_MINUTE%, %_SECOND%, %ERRORLEVEL%,
+  %ERRORLVL%, %_ROWS%, %_COLUMNS%, %_COUNTRY% and %_CODEPAGE% to command.com
+- fixed a bug in the BDOS loader that caused only 16-bit cluster numbers to be
+  used on FAT32 drives when locating the next cluster in a FAT chain
+- fixed an inconsistency in the patch files for ibmbio.com that has existed
+  since WIP version 040420
+- changed the names for the kernel files to DRBIO.SYS and DRDOS.SYS; changed
+  official name to "Enhanced DR-DOS"
 
 7.01.06:
 - added support for FAT32 partition types and boot records to disk device

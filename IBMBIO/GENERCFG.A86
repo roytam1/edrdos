@@ -161,6 +161,7 @@ preload_stacker:
 	mov	preload_file,offset dblspace_file
 	call	preload_device		; STACKER failed, try DBLSPACE from C:
 
+	Public	preload_done
 preload_done:
 	mov	ax,(MS_X_OPEN*256)+80h	; Open the configuration file
 	mov	dx,offset cfg_file	; Try Opening the file DCONFIG.SYS
@@ -229,6 +230,18 @@ cfg_query:
 ;
 	push	si
 	push	di
+	cmp	configpass,2
+	 jb	cfg_query05
+	test	CFG_FLAGS[di],CF_LAST
+	stc
+	 jnz	cfg_query06
+	jmp	cfg_query90
+cfg_query05:
+	test	CFG_FLAGS[di],CF_LAST
+	stc
+	 jz	cfg_query06
+	jmp	cfg_query90
+cfg_query06:
 	test	CFG_FLAGS[di],CF_NOF	; are Function Keys allowed ?
 ;	clc				; if not process the command
 	 jz $+5 ! jmp cfg_query90
@@ -2330,17 +2343,19 @@ func_getkey10:
 	mov	error_level,ax
 	ret
 
-func_version:				; VERSION=x.xx
+func_version:				; VERSION=x.xx,x.xx
+	call	comma			; check for leading ','
+	 jnc	func_version20		; if yes, then skip to true version
 	xor	dx,dx
 	call	atoi			; get major version number
-	 jc	func_version20		; no numerical value
+	 jc	func_version40		; no numerical value
 	cmp	ax,0
-	 jz	func_version20
+	 jz	func_version40
 	mov	dl,al
 	call	dot			; check for '.'
 	 jc	func_version10
 	call	atoi			; get minor version number
-	 jc	func_version20
+	 jc	func_version40
 	mov	dh,al
 func_version10:
 	push	es
@@ -2350,7 +2365,29 @@ func_version10:
 	mov	es:[bx],dx
 	pop	bx
 	pop	es
+	call	separator		; check for ','
+	 jc	func_version40
 func_version20:
+	xor	dx,dx
+	call	atoi			; get major version number
+	 jc	func_version40		; no numerical value
+	cmp	ax,0
+	 jz	func_version40
+	mov	dl,al
+	call	dot			; check for '.'
+	 jc	func_version30
+	call	atoi			; get minor version number
+	 jc	func_version40
+	mov	dh,al
+func_version30:
+	push	es
+	push	bx
+	mov	es,dos_dseg
+	mov	bx,0d10h		; use as new DOS version
+	mov	es:[bx],dx
+	pop	bx
+	pop	es
+func_version40:
 	ret
 	
 ;	CONFIG_ERROR is the global error handler for the CONFIG.SYS
@@ -2526,16 +2563,34 @@ dot:
 ;	DS:SI -> string
 ; On Exit:
 ;	DS:SI -> next option
-;	CY set if end of line
+;	CY set if '.' not found
 ;
 ; Strips off all whitespace, and the optional '.'
-; CY set at end of line
 	call	whitespace			; deblank string and
 	lodsb					;  check for '.' separator
 	cmp	al,'.'				;  discarding if found
 	 je	dot10
+	dec	si
 	stc					; else set carry
 dot10:
+	ret
+
+comma:
+;---------
+; On Entry:
+;	DS:SI -> string
+; On Exit:
+;	DS:SI -> next option
+;	CY set if ',' not found
+;
+; Strips off all whitespace, and the optional ','
+	call	whitespace			; deblank string and
+	lodsb					;  check for ',' separator
+	cmp	al,','				;  discarding if found
+	 je	comma10
+	dec	si
+	stc					; else set carry
+comma10:
 	ret
 
 strupr:
@@ -3420,6 +3475,7 @@ endif
 	extrn	hidosdata:byte
 	extrn	hiddscs:byte
 	extrn	hixbda:byte
+	extrn	configpass:byte
 
 if not ADDDRV
 	extrn	hidos:byte
@@ -3463,6 +3519,7 @@ cfg_file_end	rb	0
 cfg_seeklo	dw	0		; offset we have reached in CONFIG file
 cfg_seekhi	dw	0		; in case Richards CONFIG file > 64k
 
+	Public	cfg_head
 cfg_head	dw	0		; offset we are at in CONFIG_BUF
 cfg_tail	dw	0		; # bytes currently in CONFIG_BUF
 
@@ -3571,6 +3628,7 @@ CFG_SIZE	equ	6			; Size of each Entry
 CF_NOF		equ	0001h		; set if F5/F8 should be ignored
 CF_LC		equ	0002h		; set if case should be preserved
 CF_QUERY	equ	0004h		; set at run time eg. "DEVICE?"
+CF_LAST		equ	0020h		; execute in last config pass
 
 cfg_table	rw	0
 if not ADDDRV
@@ -3590,8 +3648,10 @@ if not ADDDRV
 	dw	cmd_fastopen,	func_fastopen,	0	; FASTOPEN=nnn
 	dw	cmd_drivparm,	func_drivparm,	0	; DRIVPARM=/d:nn ...
 	dw	cmd_history,	func_history,	0	; HISTORY=ON|OFF,NNN
+	dw	cmd_hiinstalllast,func_hiinstall,CF_LAST; HIINSTALLLAST=cmdstring
 	dw	cmd_hiinstall,	func_hiinstall,	0	; HIINSTALL=cmdstring
 	dw	cmd_installhigh, func_hiinstall, 0	; INSTALLHIGH=cmdstring
+	dw	cmd_installlast,func_install,	CF_LAST	; INSTALLLAST=cmdstring
 	dw	cmd_install,	func_install,	0	; INSTALL=cmdstring
 	dw	cmd_hidos,	func_hidos,	0	; HIDOS=ON/OFF
 	dw	cmd_dosdata,	func_dosdata,	0	; DOSDATA=UMB
@@ -3646,7 +3706,9 @@ cmd_fastopen	db	'FASTOPEN',0
 cmd_drivparm	db	'DRIVPARM', 0
 cmd_history	db	'HISTORY', 0
 cmd_install	db	'INSTALL', 0
+cmd_installlast	db	'INSTALLLAST', 0
 cmd_hiinstall	db	'HIINSTALL', 0
+cmd_hiinstalllast	db	'HIINSTALLLAST', 0
 cmd_installhigh	db	'INSTALLHIGH', 0
 cmd_hidos	db	'HIDOS',0
 cmd_dosdata	db	'DOSDATA',0
