@@ -785,6 +785,9 @@ REG BYTE *cmd;
 {
 	WORD	 nfiles, system, others, i;
 	LONG	 nfree = 0L;
+	char	nfrees[12];
+	char	sbuffer[15];
+	int	i1,i2;
 	DTA	 search;
 	BYTE	 path[MAX_FILELEN];
 	BYTE	 s[MAX_PATHLEN], temp[3];
@@ -1003,8 +1006,20 @@ REG BYTE *cmd;
 
 	show_crlf(OPT(DIR_PAGE));
 	nfree = (LONG)ret * (LONG)free * (LONG)secsiz;
+	nfrees[0]=0;
+	ultoa(nfree,sbuffer,10);
+	i1=strlen(sbuffer);
+	i2=(i1%3);
+	if (i2==0) i2=3;
+	while (i1>0) {
+	  strncat(nfrees,&sbuffer[strlen(sbuffer)-i1],i2);
+	  i1=i1-i2;
+	  i2=3;
+	  if (i1>0) strcat(nfrees,country.d1000);
+	}
 	if (ddrive != -1)
-	    printf ("%9d %s%10ld %s", nfiles, MSG_FILES, nfree, MSG_FREE);
+/*	    printf ("%9d %s%10ld %s", nfiles, MSG_FILES, nfree, MSG_FREE);*/
+	    printf ("%9d %s%15ls %s", nfiles, MSG_FILES, nfrees, MSG_FREE);
 	else
 	    printf ("%9d %s", nfiles, MSG_FILES);
 	show_crlf(OPT(DIR_PAGE));

@@ -159,7 +159,8 @@ MLOCAL BYTE	valid_sepchar[] = ":.;,=+";
 MLOCAL BYTE PATH_DIR[]  = "A:\\OPENDOS";
 MLOCAL BYTE SET_PATH[]  = "PATH=%s";
 MLOCAL BYTE SET_PROMPT[]  = "PROMPT=$P$G";
-MLOCAL BYTE SET_OS[]   = "OS=OPENDOS";	/* environment in COMMAND */
+/*MLOCAL BYTE SET_OS[]   = "OS=OPENDOS";*/	/* environment in COMMAND */
+MLOCAL BYTE SET_OS[]   = "OS=DRDOS";	/* environment in COMMAND */
 MLOCAL BYTE SET_VER[]  = "VER=7";	/* not in BIOSINIT        */
 #if !defined(FINAL)
 MLOCAL BYTE SET_BETA[] = "BETA=Beta 4";

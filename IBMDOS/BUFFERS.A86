@@ -140,10 +140,18 @@ update_ddsc_free:
 	push	es
 	les	bx,ss:current_ddsc
 ;	mov	cx,es:DDSC_FREE[bx]	; get current free space
+;	 jcxz	update_ddsc_free30	; if none recount to make sure
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 je	update_ddsc_free03	; yes
+	cmp	es:word ptr DDSC_FREE[bx],0	; check current free space
+	 je	update_ddsc_free30	; if none recount to make sure
+	cmp	es:word ptr DDSC_FREE[bx],0ffffh ; is count uninitialised ? (=FFFF)
+	 je	update_ddsc_free30	; if so better count the free space
+	jmps	update_ddsc_free10	; skip 32-bit free blocks count
+update_ddsc_free03:
 	cmp	es:word ptr DDSC_BFREE+2[bx],0	; check current free space
 	 jne	update_ddsc_free05
 	cmp	es:word ptr DDSC_BFREE[bx],0
-;	 jcxz	update_ddsc_free30	; if none recount to make sure
 	 je	update_ddsc_free30	; if none recount to make sure
 update_ddsc_free05:
 ;	inc	cx			; is count uninitialised ? (=FFFF)
@@ -152,30 +160,43 @@ update_ddsc_free05:
 	cmp	es:word ptr DDSC_BFREE[bx],0ffffh
 	 jz	update_ddsc_free30	; if so better count the free space
 update_ddsc_free10:
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	update_ddsc_free16	; no, then 16-bit value is exact
 	mov	ax,es:word ptr DDSC_BFREE[bx]
 	cmp	es:word ptr DDSC_BFREE+2[bx],0	; is the 16-bit value valid?
 	 je	update_ddsc_free15	; yes, then leave it
 	mov	ax,0fffeh		; else use a fake value
 update_ddsc_free15:
 	mov	es:DDSC_FREE[bx],ax	; update the 16-bit value as well
+update_ddsc_free16:
 	pop	es
 	ret
 
 update_ddsc_free30:
 ; rebuild our free space count
-	call	read_fsinfo		; read the info block first, if one exists
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	update_ddsc_free33	; no, then skip
+	call	read_fsinfo05		; read the info block first, if one exists
+	cmp	es:word ptr DDSC_BFREE+2[bx],0	; is free block count on disk zero?
+	 jne	update_ddsc_free32	; no
+	cmp	es:word ptr DDSC_BFREE[bx],0
+	 je	update_ddsc_free33	; yes, recount to make sure
+update_ddsc_free32:
 	cmp	es:word ptr DDSC_BFREE+2[bx],0ffffh	; still uninitialized?
 	 jne	update_ddsc_free10	; no, then use this value
 	cmp	es:word ptr DDSC_BFREE[bx],0ffffh
 	 jne	update_ddsc_free10
-update_ddsc_free31:			; else really rebuild it
+update_ddsc_free33:			; else really rebuild it
 	xor	ax,ax			; assume no free space yet
 	xor	dx,dx
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	update_ddsc_free35	; no, then skip
 	lea	di,DDSC_BBLOCK[bx]	; ES:DI -> DDSC_BBLOCK
 	stosw				; DDSC_BBLOCK = 0
 	stosw
 	stosw				; DDSC_BFREE = 0
 	stosw
+update_ddsc_free35:
 	lea	di,DDSC_BLOCK[bx]	; ES:DI -> DDSC_BLOCK
 	stosw				; DDSC_BLOCK = 0
 	stosw				; DDSC_FREE = 0
@@ -200,13 +221,15 @@ update_ddsc_free45:
 	pop	ax			; restore current FAT index
 	pop	dx
 	 jnz	update_ddsc_free40	; try next block if not free
-;	inc	es:DDSC_FREE[bx]	; one more free block
+	inc	es:DDSC_FREE[bx]	; one more free block
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	update_ddsc_free40	; no, then skip
 	add	es:word ptr DDSC_BFREE[bx],1	; one more free block
 	adc	es:word ptr DDSC_BFREE+2[bx],0
 	jmps	update_ddsc_free40	; try next block
 update_ddsc_free50:
 	call	write_fsinfo		; write a new FS info block first if applicable
-	 jmps	update_ddsc_free10
+	jmp	update_ddsc_free10
 
 
 discard_dirty:
@@ -439,9 +462,15 @@ if DELWATCH
 alloc_chain10:
 ;	push	dx			; DX = clusters wanted
 	les	bx,ss:current_ddsc
-;	mov	cx,es:DDSC_FREE[bx]	; CX = clusters available
-	mov	cx,es:word ptr DDSC_BFREE+2[bx]	; CX = clusters available
 	mov	al,adrive		; AL = current drive
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 je	alloc_chain12		; yes
+	mov	cx,es:DDSC_FREE[bx]	; CX = clusters available
+	cmp	cx,alloc_chain_cl	; do we have enough room in the FAT ?
+	 jb	alloc_chain20		; if not ask DELWATCH to purge
+	jmps	alloc_chain15
+alloc_chain12:
+	mov	cx,es:word ptr DDSC_BFREE+2[bx]	; CX = clusters available
 ;	cmp	cx,dx			; do we have enough room in the FAT ?
 	cmp	cx,alloc_chain_cl+2	; do we have enough room in the FAT ?
 	 jb	alloc_chain20		; if not ask DELWATCH to purge
@@ -455,8 +484,11 @@ alloc_chain15:
 	test	cx,cx			; are we out of space ?
 	 jnz	alloc_chain40		; no, go ahead and allocate the chain
 	mov	es:DDSC_FREE[bx],cx	; SSTOR says there's none, lets agree
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	alloc_chain16		; no, then skip
 	mov	es:word ptr DDSC_BFREE[bx],cx	; SSTOR says there's none, lets agree
 	mov	es:word ptr DDSC_BFREE+2[bx],cx
+alloc_chain16:
 	call	update_fat		; flush FAT to bring SSTOR up to date
 	jmps	alloc_chain10		; go round again and ask DELWATCH to
 					;  free up some more space
@@ -559,9 +591,13 @@ allocate_cluster:
 	 jnz	alloc_cl10
 	push	ds
 	lds	bx,ss:current_ddsc
-;	mov	ax,ds:DDSC_BLOCK[bx]	; else continue from last allocated block
+	mov	ax,ds:DDSC_BLOCK[bx]	; else continue from last allocated block
+	xor	dx,dx
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	alloc_cl05		; no, then skip
 	mov	ax,ds:word ptr DDSC_BBLOCK[bx]	; else continue from last allocated block
 	mov	dx,ds:word ptr DDSC_BBLOCK+2[bx]
+alloc_cl05:
 	pop	ds
 alloc_cl10:
 	mov	bx,lastcl		; highest block number on current disk
@@ -611,17 +647,23 @@ alloc_cl35:
 	push	ds
 	lds	bx,ss:current_ddsc
 	mov	ds:DDSC_FREE[bx],ax	; we definitely have none left
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	alloc_cl36		; no, then skip
 	mov	ds:word ptr DDSC_BFREE[bx],ax	; we definitely have none left
 	mov	ds:word ptr DDSC_BFREE+2[bx],dx
+alloc_cl36:
 	pop	ds
 	ret				; return (0);
 
 alloc_cl50:
 	push	ds			; block # AX is available
 	lds	bx,ss:current_ddsc
-;	mov	ds:DDSC_BLOCK[bx],ax	; remember for next time
+	mov	ds:DDSC_BLOCK[bx],ax	; remember for next time
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	alloc_cl52		; no, then skip
 	mov	ds:word ptr DDSC_BBLOCK[bx],ax	; remember for next time
 	mov	ds:word ptr DDSC_BBLOCK+2[bx],dx
+alloc_cl52:
 	pop	ds
 
 	push	dx
@@ -729,12 +771,14 @@ fixfat10:				; allocating or fixing block
 
 fixfat15:				; DI = change in free space (-1,1)
 	les	si,current_ddsc
-;	add	es:DDSC_FREE[si],di	; update free space count
+	add	es:DDSC_FREE[si],di	; update free space count
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	fixfat20		; no, then skip
 	cmp	di,0ffffh
 	 je	fixfat16
 	add	es:word ptr DDSC_BFREE[si],di	; update free space count
 	adc	es:word ptr DDSC_BFREE+2[si],0
-	 jmps	fixfat17
+	jmps	fixfat17
 fixfat16:
 	sub	es:word ptr DDSC_BFREE[si],1	; update free space count
 	sbb	es:word ptr DDSC_BFREE+2[si],0
@@ -790,7 +834,7 @@ fixfat70:
 	xchg	ax,si			; AX = free space change (-1, 0 , 1)
 	les	si,current_ddsc
 	add	es:DDSC_FREE[si],ax	; update free space count
-	add	es:word ptr DDSC_BFREE[si],ax	; update free space count (32-bit)
+;	add	es:word ptr DDSC_BFREE[si],ax	; update free space count (32-bit)
 ;	adc	es:word ptr DDSC_BFREE+2[si],0
 	les	si,bcb_root		; get buffer control block
 	or	es:BCB_FLAGS[si],BF_DIRTY
@@ -850,7 +894,7 @@ fatptr:
 	 jne	fatptr10		; no, then it must be FAT16
 	shl	ax,1			; * 2 again, making it * 4 in total
 	rcl	dx,1
-	 jmps	fatptr10
+	jmps	fatptr10
 fatptr09:
 	mov	bx,ax			; * 1.5
 	shr	ax,1			; shift for 1 1/2 byte, else 2 byte
@@ -1586,6 +1630,7 @@ setup_rwx:
 read_fsinfo:
 	cmp	dosfat,FAT32		; is this a FAT32 partition?
 	 jne	read_fsinfo10		; no, then there is no fs info block
+read_fsinfo05:
 	push	es
 	push	ds
 	push	es

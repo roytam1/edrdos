@@ -1407,10 +1407,22 @@ select_ddsc:
 	mov	di,offset local_ddsc	; ES:DI -> DDSC_ copy
 	mov	cx,LOCAL_DDSC_LEN
 	rep	movsb			; make a local copy of interesting bits
+	cmp	ds:DDSC_NFATRECS[bx],0	; is it a 32 bit FAT ?
+	 je	select_ddsc04		; yes, then also copy extended DDSC
+	mov	ax,es:datadd		; these values are used as 32-bit
+	mov	es:bdatadd,ax
+	mov	ax,es:lastcl
+	mov	es:blastcl,ax
+	xor	ax,ax
+	mov	es:bdatadd+2,ax
+	mov	es:blastcl+2,ax
+	jmps	select_ddsc05
+select_ddsc04:
 	lea	si,DDSC_BDATADDR[bx]
 	mov	di,offset local_ddsc2
 	mov	cx,LOCAL_DDSC2_LEN
 	rep	movsb			; more interesting bits to copy
+select_ddsc05:
 ;	push es ! pop ds		; DS=ES=local data segment
 	push ds ! push es
 	pop ds ! pop es			; swap ES and DS
@@ -1432,10 +1444,19 @@ select_ddsc:
 ;	sub	ax,fatadd		;  bigger than 255 
 ;	xor	dx,dx
 ;	div	nfats
+	cmp	es:DDSC_NFATRECS[bx],0	; is it a 32 bit FAT ?
+	 je	select_ddsc10		; yes, then use 32-bit value
+	mov	ax,es:word ptr DDSC_NFATRECS[bx]	; # of sectors per FAT
+	mov 	nfatrecs,ax
+	xor	ax,ax
+	mov	nfatrecs+2,ax
+	jmps	select_ddsc20
+select_ddsc10:
 	mov	ax,es:word ptr DDSC_BFATRECS[bx]	; # of sectors per FAT
 	mov 	nfatrecs,ax
 	mov	ax,es:word ptr DDSC_BFATRECS+2[bx]
 	mov 	nfatrecs+2,ax
+select_ddsc20:
 	mov	cx,FCBLEN
 	mov	ax,clsize		; convert from cluster size
 ;	xor	dx,dx			;  to number of dir entries
@@ -1444,12 +1465,12 @@ select_ddsc:
 	mov	dirperclu,ax		;  subdirectories
 	mov	ax,FAT32
 	cmp	es:DDSC_NFATRECS[bx],0	; is it a 32 bit FAT ?
-	 je	select_ddsc10
+	 je	select_ddsc30
 	mov	ax,FAT12
 	cmp	lastcl,MAX12		; is it a 12 bit FAT ?
-	 jbe	select_ddsc10
+	 jbe	select_ddsc30
 	mov	ax,FAT16		; no, it's 16 bit
-select_ddsc10:
+select_ddsc30:
 	mov	dosfat,ax		; remember which for later
 	clc				; drive all selected
 	ret

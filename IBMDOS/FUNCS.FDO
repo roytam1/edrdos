@@ -1936,8 +1936,8 @@ if DOS5
 else
 	mov	es:DDSC_NFATRECS[di],al	; set FAT size
 endif
-	mov	es:word ptr DDSC_BFATRECS[di],ax	; FAT size (32-bit)
-	mov	es:word ptr DDSC_BFATRECS+2[di],0
+;	mov	es:word ptr DDSC_BFATRECS[di],ax	; FAT size (32-bit)
+;	mov	es:word ptr DDSC_BFATRECS+2[di],0
 
 	mov	ax,es:word ptr DDSC_NFATRECS[di]
 	mul	dx			; AX = FAT size
@@ -1954,8 +1954,8 @@ endif
 	div	cx			; convert to whole sectors
 	add	ax,es:DDSC_DIRADDR[di]	; add in base of root directory
 	mov	es:DDSC_DATADDR[di],ax	; set this as first cluster address
-	mov	es:DDSC_BDATADDR[di],ax	; also make this 32-bit value for now
-	mov	es:DDSC_BDATADDR+2[di],0
+;	mov	es:DDSC_BDATADDR[di],ax	; also make this 32-bit value for now
+;	mov	es:DDSC_BDATADDR+2[di],0
 
 	pop	ax			; recover total disk size
 	xor	dx,dx			; assume 16 bit number
@@ -1983,16 +1983,16 @@ bpb2ddsc30:				; CL = log2 (CH)
 	mov	es:DDSC_CLSHF[di],cl	; set cluster shift
 	inc	ax			; clusters 0/1 reserved (+2), and we
 	mov	es:DDSC_NCLSTRS[di],ax	;  want max (-1), so +1
-	mov	es:word ptr DDSC_BCLSTRS[di],ax	; make this the default 32-bit value, too
+;	mov	es:word ptr DDSC_BCLSTRS[di],ax	; make this the default 32-bit value, too
 	xor	ax,ax
-	mov	es:word ptr DDSC_BCLSTRS+2[di],ax
+;	mov	es:word ptr DDSC_BCLSTRS+2[di],ax
 	mov	es:DDSC_BLOCK[di],ax	; next block = 0
-	mov	es:word ptr DDSC_BBLOCK[di],ax
-	mov	es:word ptr DDSC_BBLOCK+2[di],ax
+;	mov	es:word ptr DDSC_BBLOCK[di],ax
+;	mov	es:word ptr DDSC_BBLOCK+2[di],ax
 	dec	ax
 	mov	es:DDSC_FREE[di],ax	; free space = -1 (unknown)
-	mov	es:word ptr DDSC_BFREE[di],ax
-	mov	es:word ptr DDSC_BFREE+2[di],ax
+;	mov	es:word ptr DDSC_BFREE[di],ax
+;	mov	es:word ptr DDSC_BFREE+2[di],ax
 
 	cmp	es:DDSC_DIRENT[di],0	; is this an extended BPB?
 	 je	bpb2ddsc40		; yes
@@ -2049,6 +2049,12 @@ bpb2ddsc42:
 bpb2ddsc43:
 	mov	es:word ptr DDSC_BCLSTRS[di],ax
 	mov	es:word ptr DDSC_BCLSTRS+2[di],dx
+	xor	ax,ax
+	mov	es:word ptr DDSC_BBLOCK[di],ax	; next block = 0
+	mov	es:word ptr DDSC_BBLOCK+2[di],ax
+	dec	ax
+	mov	es:word ptr DDSC_BFREE[di],ax	; free space = -1 (unknown)
+	mov	es:word ptr DDSC_BFREE+2[di],ax
 
 bpb2ddsc50:
 	ret
@@ -2093,8 +2099,11 @@ fdos_ddio:
 	 jne	fdos_ddio10
 	mov	ax,0FFFFh
 	mov	es:DDSC_FREE[bx],ax	; free space = -1 (unknown)
+	cmp	dosfat,FAT32		; FAT32 drive?
+	 jne	fdos_ddio05		; no, then skip
 	mov	es:word ptr DDSC_BFREE[bx],ax	; free space = -1 (unknown)
 	mov	es:word ptr DDSC_BFREE+2[bx],ax
+fdos_ddio05:
 	call	hshdscrd		; discard hashing info for all drives (AL=FF)
 	mov	ax,CMD_OUTPUT+1*256	; disk write operation of system area
 fdos_ddio10:
