@@ -247,12 +247,17 @@ cfg_query06:
 	 jz $+5 ! jmp cfg_query90
 	cmp	ax,F5KEY		; F5 bypasses CONFIG processing
 	stc				;  so bypass this line
-	 je	cfg_query90
+;	 je	cfg_query90
+	 jne	cfg_query07
+	jmp	cfg_query90
+cfg_query07:
 	test	CFG_FLAGS[di],CF_QUERY	; specific QUERY request ?
 	 jnz	cfg_query10
 	cmp	ax,F8KEY		; should we prompt for everything ?
 	clc				; if not process the command
-	 jne	cfg_query90
+;	 jne	cfg_query90
+	 je	cfg_query10
+	jmp	cfg_query90
 cfg_query10:
 	push	si
 	mov	si,CFG_NAME[di]		; DS:SI -> command name we matched
@@ -284,10 +289,14 @@ cfg_query50:
 	mov	ah,MS_C_WRITE
 	mov	dl,yes_char
 	int	DOS_INT			; do "Y"
-	mov	dl,'/'
-	int	DOS_INT			; do "/"
+	mov	dl,','
+	int	DOS_INT			; do ","
 	mov	dl,no_char
 	int	DOS_INT			; do "N"
+	mov	dl,','
+	int	DOS_INT			; do ","
+	mov	dl,run_char
+	int	DOS_INT			; do "R"
 	mov	ah,MS_C_WRITESTR
 	mov	dx,offset confirm_msg2
 	int	DOS_INT			; do ") ? "
@@ -301,8 +310,43 @@ cfg_query60:
 	 jnz	cfg_query70
 	mov	ah,MS_C_RAWIN
 	int	DOS_INT			; throw away function keys
-    jmps    cfg_query60  
+;    jmps    cfg_query60  
 cfg_query70:
+	cmp	al,13			; accept <CR> for 'yes'
+	 jne	cfg_query71
+	mov	al,yes_char
+	jmps	cfg_query80
+cfg_query71:
+	cmp	al,32			; accept <SPACE> for 'no'
+	 jne	cfg_query72
+	mov	al,no_char
+	stc
+	jmps	cfg_query80
+cfg_query72:
+	cmp	al,27			; accept <ESC> for 'run'
+	 jne	cfg_query73
+	mov	al,run_char
+	mov	boot_options,0
+	jmps	cfg_query80
+cfg_query73:
+	call	toupper			; make response upper case
+	cmp	al,yes_char
+	 je	cfg_query80
+	cmp	al,no_char
+	 jne	cfg_query75
+	stc
+	jmps	cfg_query80
+cfg_query75:
+	cmp	al,run_char
+	 je	cfg_query76
+	mov	ah,MS_C_WRITE
+	mov	dl,7
+	int	DOS_INT			; beep
+	jmps	cfg_query60
+cfg_query76:
+	mov	boot_options,0
+cfg_query80:
+	pushf
 	push	ax			; save response
 	mov	ah,MS_C_WRITE
 	mov	dl,al
@@ -311,10 +355,11 @@ cfg_query70:
 	mov	dx,offset confirm_msg3	; "DEVICE=FILENAME.SYS (Y/N) ?"
 	int	DOS_INT			; now do CR/LF to tidy up
 	pop	ax
-	call	toupper			; make response upper case
-	cmp	al,yes_char		; is it yes ?
-	 je	cfg_query90
-	stc				; return CY set, skip this line
+;	call	toupper			; make response upper case
+;	cmp	al,yes_char		; is it yes ?
+;	 je	cfg_query90
+;	stc				; return CY set, skip this line
+	popf
 cfg_query90:
 	pop	di
 	pop	si
@@ -2159,6 +2204,39 @@ func_cpos40:
 	int	10h			; Eeeek!! call the ROS
 	ret
 
+func_colour:				; Set fore-/background/border colour
+	call	comma
+	 jnc	func_colour10
+	call	atoi
+	 jc	func_colour30
+	and	al,15
+	les	bx,dword ptr condev_off
+	mov	es:byte ptr 19[bx],1
+	mov	es:18[bx],al
+	call	separator
+	 jc	func_colour30
+func_colour10:
+	call	comma
+	 jnc	func_colour20
+	call	atoi
+	 jc	func_colour30
+	and	al,15
+	mov	cl,4
+	shl	al,cl
+	les	bx,dword ptr condev_off
+	mov	es:byte ptr 19[bx],1
+	or	es:18[bx],al
+	call	separator
+	 jc	func_colour30
+func_colour20:
+	call	atoi
+	 jc	func_colour30
+	mov	bh,al
+	mov	ax,1001h
+	int	10h
+func_colour30:
+	ret
+
 func_timeout:
 ; set TIMEOUT for keyboard input
 	call	atoi			; AX = # timeout count
@@ -2261,7 +2339,10 @@ func_onerror_take:
 func_query:
 ; ?optional command
 	cmp	boot_options,F5KEY	; if F5 has been pressed then
-	 je	func_query50		;  do nothing
+;	 je	func_query50		;  do nothing
+	 jne	func_query05
+	jmp	func_query50
+func_query05:
 	call	whitespace		; discard any following whitespace
 	lodsb				; get a character	
 	cmp	al,'?'			; is it another '?', is so swallow it
@@ -2310,8 +2391,28 @@ func_query30:
 	 jnz	func_query40
 	mov	ah,MS_C_RAWIN
 	int	DOS_INT			; throw away function keys
-    jmps    func_query30
+;    jmps    func_query30
 func_query40:
+	cmp	al,13			; accept <CR> for 'yes'
+	 jne	func_query41
+	mov	al,yes_char
+	jmps	func_query45
+func_query41:
+	cmp	al,32			; accept <SPACE> for 'no'
+	 jne	func_query42
+	mov	al,no_char
+	jmps	func_query45
+func_query42:
+	call	toupper
+	cmp	al,yes_char
+	 je	func_query45
+	cmp	al,no_char
+	 je	func_query45
+	mov	ah,MS_C_WRITE
+	mov	dl,7
+	int	DOS_INT
+	jmps	func_query30
+func_query45:
 	push	ax			; save response
 	mov	ah,MS_C_WRITE
 	mov	dl,al
@@ -2320,7 +2421,7 @@ func_query40:
 	mov	dx,offset confirm_msg3
 	int	DOS_INT			; now do CR/LF to tidy up
 	pop	ax
-	call	toupper			; make response upper case
+;	call	toupper			; make response upper case
 	pop	si			; recover starting position
 	cmp	al,yes_char
 	 jne	func_query50
@@ -3673,6 +3774,7 @@ endif
 	dw	cmd_return,	func_return,	0	; RETURN (from GOSUB)
 	dw	cmd_cls,	func_cls,	0	; Clear Screen
 	dw	cmd_cpos,	func_cpos,	0	; Set Cursor Position
+	dw	cmd_colour,	func_colour,	0	; Set Fore-/Background/Border Colour
 	dw	cmd_timeout,	func_timeout,	0	; set ? TIMEOUT
 	dw	cmd_switch,	func_switch,	0	; SWITCH=n
 	dw	cmd_onerror,	func_onerror,	CF_LC	; ONERROR='n' optional command
@@ -3730,6 +3832,7 @@ cmd_gosub	db	'GOSUB',0
 cmd_return	db	'RETURN',0
 cmd_cls		db	'CLS',0
 cmd_cpos	db	'CPOS',0
+cmd_colour	db	'COLOUR',0
 cmd_timeout	db	'TIMEOUT',0
 cmd_switch	db	'SWITCH',0
 cmd_onerror	db	'ONERROR',0

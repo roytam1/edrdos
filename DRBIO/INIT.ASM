@@ -221,6 +221,7 @@ con_drvr	dw	CG:aux_drvr, 0	; link to next device driver
 		dw	DA_CHARDEV+DA_SPECIAL+DA_ISCOT+DA_ISCIN+DA_IOCTL
 		dw	CG:strat, CG:IntCon
 		db	'CON     '
+col_mode	dw	15
 
 aux_drvr	dw	CG:prn_drvr, 0		; link to next device driver
 		dw	DA_CHARDEV
@@ -477,10 +478,61 @@ FastConsole  proc   far
 	cmp	al,8			; back space character
 	 je	Fastcon30		; special case
 Fastcon10:
-	mov	ah,0Eh			; use ROS TTY-like output function
+	push	es
+	push	cx
+	mov	cx,40h
+	mov	es,cx
+	mov	bx,cs:col_mode		; get colour mode
+	cmp	bh,0			; check if COLOUR is active
+	 je	Fastcon15		; no, continue normally
+	cmp	al,7			; check for non-printable chars
+	 je	Fastcon15
+	cmp	al,0ah
+	 je	Fastcon13
+	cmp	al,0dh
+	 je	Fastcon15
+	xor	bh,bh			; assume video page 0
+	mov	ah,9
+	mov	cx,1			; one char to display
+	int	10h			; display char with given colour
+	mov	bl,ah
+	mov	ah,3
+	int	10h
+	inc	dl
+	cmp	dl,es:4ah
+	 jb	Fastcon12
+	mov	dl,0
+Fastcon11:
+	inc	dh
+	cmp	dh,es:84h
+	 jbe	Fastcon12
+	dec	dh
+	push	dx
+	mov	ax,601h
+	xor	cx,cx
+	mov	dl,es:4ah
+	dec	dl
+	mov	dh,es:84h
+	mov	bh,cs:byte ptr col_mode
+	int	10h
+	pop	dx
+Fastcon12:
+	mov	ah,2
+	mov	bh,es:62h
+	int	10h
+	jmps	Fastcon20
+Fastcon13:
+	mov	ah,3
+	xor	bh,bh
+	int	10h
+	jmps	Fastcon11
+Fastcon15:
+	mov	ah,0eh			; use ROS TTY-like output function
 	mov	bx,7			; use the normal attribute
 	int	VIDEO_INT		; output the character in AL
 Fastcon20:
+	pop	cx
+	pop	es
 	popx	<bp, di, si, bx, ax>
 	iret
 
@@ -1011,7 +1063,8 @@ CODE	ends
 
 RCODE_ALIGN	segment public para 'RCODE'
 ifndef ROMSYS
-	db	1100h dup(0)		; reserve space for command.com
+;	db	1100h dup(0)		; reserve space for command.com
+	db	1500h dup(0)		; reserve space for command.com
 endif
 RCODE_ALIGN	ends
 

@@ -80,7 +80,7 @@ INIT_COMSPEC	equ	0002h		; COMSPEC_DRV specifies the default
 INIT_WINDOWS	equ	0004h		; Disable windows support
 
 COMMAND_BASE	equ	000E0h		; must cover FFFF:D0 for CALL5 fixup
-COMMAND_SIZE	equ	01680h
+COMMAND_SIZE	equ	01A80h
 
 CGROUP	GROUP	CODE, INITCODE, INITDATA, INITPSP, INITENV, DATAEND
 CODE	CSEG
@@ -950,6 +950,7 @@ reloc_xbda10:
 reloc_xbda15:
 	call	alloc_seg		; allocate low mem
 reloc_xbda20:
+	push	cx
 	xor	bx,bx
 	xchg	ax,dx
 	xor	ah,ah
@@ -968,6 +969,7 @@ reloc_xbda20:
 	mov	ds,ax
 	mov	ds:0eh[bx],es
 	pop	ds
+	pop	cx
 	les	bx,func52_ptr		; now get the start of the MCB chain
 	mov	es,es:F52_DMDROOT[bx]
 	mov	si,mem_size
@@ -979,12 +981,24 @@ reloc_xbda30:
 	inc	ax
 	cmp	di,si			; is this the one that includes the old XBDA?
 	 je	reloc_xbda40		; yes
-	cmp	ax,si			; already past the right position?
-	 ja	reloc_xbda130		; that cannot be helped
-	mov	es,ax			; get the address of the next MCB
 	cmp	es:DMD_ID,IDZ		; already the last one?
-	 jne	reloc_xbda30		; no, try again
-	jmps	reloc_xbda130		; did not find it
+	 jne	reloc_xbda31		; no
+	push	si
+	inc	si
+	cmp	ax,si			; XBDA immediately following this block?
+	pop	si
+	 je	reloc_xbda35		; yes
+	jmp	reloc_xbda130		; did not find it
+reloc_xbda31:
+	cmp	ax,si			; already past the right position?
+	 jna	reloc_xbda32		; no
+	jmp	reloc_xbda130		; that cannot be helped
+reloc_xbda32:
+	mov	es,ax			; get the address of the next MCB
+	jmps	reloc_xbda30		; try again
+reloc_xbda35:
+	add	es:DMD_LEN,cx		; length of XBDA
+	jmp	reloc_xbda45
 reloc_xbda40:
 	push	ax			; save length of old MCB
 	push	es:DMD_PSP		; and the old PSP pointer
@@ -1009,6 +1023,7 @@ reloc_xbda40:
 	mov	es:F52_DMD_UPPER[bx],9fffh
 	les	bx,drdos_ptr
 	mov	es:DRDOS_DMD_UPPER[bx],9fffh
+reloc_xbda45:
 	mov	mem_size,0a000h		; and the base mem top
 	mov	ax,40h			; also update the new base mem size
 	mov	es,ax			; in the BIOS data area

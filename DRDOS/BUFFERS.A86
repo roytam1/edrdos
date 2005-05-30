@@ -176,6 +176,8 @@ update_ddsc_free30:
 ; rebuild our free space count
 	cmp	dosfat,FAT32		; FAT32 drive?
 	 jne	update_ddsc_free33	; no, then skip
+	cmp	es:DDSC_FSINFO[bx],0ffffh;FS info sector present?
+	 je	update_ddsc_free33	; no, then do not try to read from it
 	call	read_fsinfo05		; read the info block first, if one exists
 	cmp	es:word ptr DDSC_BFREE+2[bx],0	; is free block count on disk zero?
 	 jne	update_ddsc_free32	; no
@@ -228,7 +230,10 @@ update_ddsc_free45:
 	adc	es:word ptr DDSC_BFREE+2[bx],0
 	jmps	update_ddsc_free40	; try next block
 update_ddsc_free50:
+	cmp	es:DDSC_FSINFO[bx],0ffffh;FS info sector present?
+	 je	update_ddsc_free55	; no, then do not write to it, either
 	call	write_fsinfo		; write a new FS info block first if applicable
+update_ddsc_free55:
 	jmp	update_ddsc_free10
 
 
@@ -1092,7 +1097,10 @@ update_fat:		;write out modified FAT buffers
 	push	es
 	push	bx
 	les	bx,current_ddsc
+	cmp	es:DDSC_FSINFO[bx],0ffffh;FS info sector present?
+	 je	update_fat10		; no, then do not to write it, either
 	call	write_fsinfo		; update fs info block if applicable
+update_fat10:
 	pop	bx
 	pop	es
 	mov	ah,BF_ISFAT		; flush all dirty FAT buffers

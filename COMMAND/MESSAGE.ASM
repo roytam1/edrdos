@@ -17,7 +17,7 @@ _msg_ver111	db	NUL , NUL
 	public	_msg_version
 	public	msg_version
 msg_version	label	byte
-_msg_version	db	LF, "Enhanced DR-DOS 7.01.07 (6.3.2005) ", "based on Caldera OpenDOS 7.01", LF, NUL
+_msg_version	db	LF, "Enhanced DR-DOS 7.01.08 WIP (30.5.2005) ", "based on Caldera OpenDOS 7.01", LF, NUL
 	public	_msg_lbl
 	public	msg_lbl
 msg_lbl	label	byte

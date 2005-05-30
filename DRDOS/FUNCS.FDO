@@ -2022,6 +2022,13 @@ bpb2ddsc41:
 	lodsw				; get high word
 	mov	es:word ptr DDSC_FSROOT+2[di],ax
 	lodsw				; get sector number of file system info sector
+	cmp	ax,es:DDSC_FATADDR[di]	; is the info sector below the FAT?
+	 jae	bpb2ddsc41a		; no, it must be invalid
+	cmp	ax,0			; same as boot sector?
+	 jnz	bpb2ddsc41b		; if yes, that does not make sense
+bpb2ddsc41a:
+	mov	ax,0ffffh		; so just assume there is none
+bpb2ddsc41b:
 	mov	es:DDSC_FSINFO[di],ax
 	lodsw				; get sector number of backup boot sector
 	mov	es:DDSC_BOOTBAK[di],ax

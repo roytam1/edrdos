@@ -18,6 +18,10 @@ _yes_char	db	"Yy", NUL
 	public	no_char
 no_char	label	byte
 _no_char	db	"Nn", NUL
+	public	_run_char
+	public	run_char
+run_char	label	byte
+_run_char	db	"Rr", NUL
 	public	_bad_command
 	public	bad_command
 bad_command	label	byte

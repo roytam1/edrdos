@@ -179,7 +179,6 @@ CODE	segment	'CODE'
 	extrn	output_hex:near
 	extrn	diskaddrpack:word
 
-
 udsc_root	label	dword
 		dw	-1,-1
 
@@ -3004,23 +3003,93 @@ hd_bpb10:
 	cmp	dx,32			; less than 32*65536 sectors (1 Gb)?
 	 jb	hd_bpb20		; yes, leave cluster size the same
 	mov	BPB_ALLOCSIZ[bx],32*2	; use 32 K clusters if 1-2 Gb
+	cmp	dx,64			; less than 64*65536 sectors (2 Gb)?
+	 jb	hd_bpb20		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],64*2	; use 64 K clusters if 2-4 Gb
+	cmp	dx,128			; less than 128*65536 sectors (4 Gb)?
+	 jb	hd_bpb20		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],0	; use 128 K clusters if 4-8 Gb
+	cmp	dx,256			; more than 256*65536 sectors (8 Gb)?
+	 jae	hd_bpb30		; then use FAT32 instead
 
 hd_bpb20:				; cluster size determined
 	sub	ax,1+(512*32/SECSIZE)	; subtract reserved+root directory
 	sbb	dx,0			; (note: 32 bytes per entry)
 	xor	cx,cx
 	mov	ch,BPB_ALLOCSIZ[bx]	; CX = (256 * # of clusters on drive)
-;	dec	cx
-	dec	ch
+	dec	cx
 	add	ax,cx			; add in for rounding error
 	adc	dx,0
 	inc	cx
+	 jnz	hd_bpb25
+	xchg	ax,dx
+	jmps	hd_bpb26
+hd_bpb25:
 	div	cx			; AX = # of fat sectors
+hd_bpb26:
 	mov	BPB_FATSEC[bx],ax	; remember FAT size
 	mov	es:UDSC_FSTYPE+4[di],'6'; change "FAT12" to "FAT16"
 	ret
 	
-
+hd_bpb30:				; build BPB for FAT32
+	mov	BPB_DIRMAX[bx],0	; FAT32, so no fixed root dir
+	mov	BPB_FATADD[bx],3	; assume 1 boot, 1 reserved, 1 info sector
+	mov	word ptr BPB_FSROOT[bx],2; assume root dir is in first cluster
+	mov	BPB_FSINFO[bx],2	; FS info sector at 2, this is standard
+	mov	BPB_BOOTBAK[bx],0ffffh	; no backup boot sector
+	mov	BPB_ALLOCSIZ[bx],1	; use 0.5 K clusters <64 Mb
+	cmp	dx,2			; less than 2*65536 sectors (64 Mb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],1*2	; use 1 K clusters if 64-256 Mb
+	cmp	dx,8			; less than 8*65536 sectors (256 Mb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],2*2	; use 2 K clusters if 256-1024 Mb
+	cmp	dx,32			; less than 32*65536 sectors (1 Gb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],4*2	; use 4 K clusters if 1-4 Gb
+	cmp	dx,128			; less than 128*65536 sectors (4 Gb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],8*2	; use 8 K clusters if 4-16 Gb
+	cmp	dx,512			; less than 512*65536 sectors (16 Gb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],16*2	; use 16 K clusters if 16-64 Gb
+	cmp	dx,2048			; less than 2048*65536 sectors (64 Gb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],32*2	; use 32 K clusters if 64-256 Gb
+	cmp	dx,8192			; less than 8192*65536 sectors (256 Gb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],64*2	; use 64 K clusters if 256-1024 Gb
+	cmp	dx,32768		; less than 32768*65536 sectors (1024 Gb)?
+	 jb	hd_bpb40		; yes, leave cluster size the same
+	mov	BPB_ALLOCSIZ[bx],0	; use 128 K clusters if >1024 Gb
+	
+hd_bpb40:				; cluster size determined
+	sub	ax,1			; subtract reserved
+	sbb	dx,0
+	xor	cx,cx
+	mov	ch,BPB_ALLOCSIZ[bx]	; CX = (256 * # of clusters on drive)
+	dec	cx
+	add	ax,cx			; add in for rounding error
+	adc	dx,0
+	inc	cx
+;	div	cx			; AX = # of fat sectors
+	push	bp
+	push	dx
+	push	ax
+	xor	ax,ax
+	push	ax
+	push	cx
+	sub	sp,8
+	call	div32i
+	add	sp,4
+	pop	ax
+	pop	dx
+	add	sp,8
+	pop	bp
+	mov	word ptr BPB_BFATSEC[bx],ax	; remember FAT size
+	mov	word ptr BPB_BFATSEC+2[bx],dx
+	mov	es:UDSC_FSTYPE+3[di],'3'; change "FAT12" to "FAT32"
+	ret
 
 new_unit:
 	push	ds
@@ -3063,6 +3132,43 @@ new_unit10:
 	pop	ds
 	ret
 
+div32i:					; 32-bit division
+;--------
+; On Entry:
+;	32-bit dividend & divisor on stack
+;	space for 32-bit quotient & remainder reserved on stack
+;	SP-16
+; On Exit:
+;	32-bit quotient & remainder on stack
+;	SP-16
+; Modified registers:
+;	AX,CX,DX,BP
+	mov	bp,sp			; base address of temporary variables
+	add	bp,2
+	xor	ax,ax			; clear work registers
+	xor	dx,dx
+	mov	cx,32			; 32 bits
+div32i_loop:
+	shl	word ptr 4[bp],1	; multiply quotient with two
+	rcl	word ptr 6[bp],1
+	shl	word ptr 12[bp],1	; shift one bit from dividend
+	rcl	word ptr 14[bp],1
+	rcl	ax,1			; to work registers
+	rcl	dx,1
+	cmp	dx,10[bp]		; compare high word with divisor
+	 jb	div32i_2
+	 ja	div32i_1
+	cmp	ax,8[bp]		; compare low word
+	 jb	div32i_2
+div32i_1:
+	or	word ptr 4[bp],1	; divisor fits one time
+	sub	ax,8[bp]		; subtract divisor
+	sbb	dx,10[bp]
+div32i_2:
+	loop	div32i_loop		; loop back if more bits to shift
+	mov	[bp],ax			; save remainder onto stack
+	mov	2[bp],dx
+	ret
 
 ICODE	ends
 

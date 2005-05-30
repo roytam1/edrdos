@@ -1,3 +1,19 @@
+7.01.08 WIP:
+(30.5.2005):
+- made XBDA=LOW properly handle the case when no upper memory chain is present
+- added new config.sys COLOUR=xx,yy,zz to set the colour of foreground,
+  background and border, respectively
+- reserved more space in HMA for command.com to allow it to load high again
+- added support for quoted strings in batch file arguments
+- fixed BPB (BIOS parameter block) for unformatted FAT32 partitions
+- fixed free space handling for FAT32 drives without File System Info Block,
+  added safeguard against invalid FS Info Block
+- added alternate keys <CR> and <SPACE> to answer (Y/N) question for F8-single-
+  stepping and queries (? command) in config.sys; changed these routines to
+  beep if wrong key has been pressed instead of simply selecting 'no'
+- added option to run through the rest of config.sys in single-stepping mode by
+  hitting the R or <ESC> key
+
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions
 - added support for category code 48h (FAT32) to generic ioctl function,
