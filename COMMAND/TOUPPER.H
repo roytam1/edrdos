@@ -172,6 +172,7 @@ EXTERN	BYTE * cdecl dls_msg1(UWORD);
 #define	MSG_BADCMD	msg_badcmd	
 #define	MSG_PATHDRV	msg_pathdrv	
 #define MSG_OPTLINE	msg_optline
+#define MSG_OPTLINE2	msg_optline2
 #define	MSG_BATTERM	msg_batterm	
 #define	MSG_BATMISS	msg_batmiss	
 #define	MSG_BATNEST	msg_batnest	

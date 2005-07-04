@@ -39,6 +39,7 @@ with older software:
 - It now supports drives with 128K cluster size. This is mostly untested, since
   there are no DOS tools that support this cluster size. Existing tools
   probably cannot handle this size.
+  Update (30.5.2005): The new DR-DOS FORMAT v1.0 supports this cluster size.
 - Several config.sys commands that DR-DOS 7.03 uses to move data structures to
   upper memory are now supported, some of which have been enhanced to provide
   additional benefits. Older software might expect to see these structures in

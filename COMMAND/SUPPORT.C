@@ -894,6 +894,9 @@ EXTERN BYTE FAR * CDECL farptr(BYTE *);
 
 #define	YES_CHAR	(*farptr(YES_NO+0))
 #define	NO_CHAR		(*farptr(YES_NO+1))
+#define RUN_CHAR	'R'
+
+EXTERN UWORD	boot_key_scan_code;
 
 GLOBAL BOOLEAN yes(abort, def)
 BOOLEAN abort, def;
@@ -1287,7 +1290,8 @@ GLOBAL	VOID optional_line(line)
 BYTE	*line;
 {
 	BYTE	c;
-	BYTE	*s;	
+	BYTE	*s;
+	BYTE	yn;
 
 	if (*line == 13 || *line == 10 || *line == 0) return;
 
@@ -1299,9 +1303,36 @@ BYTE	*line;
 	    s++;
 	    strcpy(line,s);
 	}
-	else printf(MSG_OPTLINE,line);
+	else
+	  if (boot_key_scan_code==0x4200)
+	    printf(MSG_OPTLINE2,line);
+	  else
+	    printf(MSG_OPTLINE,line);
 	
-	if (!yes(NO,NO)) *line = 0;
+	while (!((yn==YES_CHAR)||(yn==NO_CHAR)||((yn==RUN_CHAR)&&(boot_key_scan_code==0x4200)))) {
+#if defined(CDOSTMP)
+	  yn = (BYTE) bdos(C_RAWIO, 0xFD);	/* Input a character and */
+#else
+	  yn = (BYTE) msdos((MS_C_RAWIN), NULL);	 
+#endif						/* read the response	*/
+	  yn=toupper(yn);			/* both upper and lower case */
+	  if (yn==13)				/* accept <CR> for Y */
+	    yn=YES_CHAR;
+	  if (yn==32)				/* <SPACE> for N */
+	    yn=NO_CHAR;
+	  if (yn==27)				/* and <ESC> for R */
+	    yn=RUN_CHAR;
+	  if (!((yn==YES_CHAR)||(yn==NO_CHAR)||((yn==RUN_CHAR)&&(boot_key_scan_code==0x4200))))
+	    eprintf("\7");
+	  else {
+	    putc(yn);				/* echo the character */
+	    crlf(); 				/* new line		*/
+	  }
+	}
+
+/*	if (!yes(NO,NO)) *line = 0;*/
+	if (yn==NO_CHAR) *line = 0;		/* skip this line if NO */
+	if (yn==RUN_CHAR) boot_key_scan_code=0; /* run-through, deselect F8 key */
 
 	/*printf("\n");*/
 	

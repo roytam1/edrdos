@@ -196,6 +196,7 @@ N_CMD {
 #define 	ATTR_LBL	0x0008	/* find labels		 	*/
 #define 	ATTR_DIR	0x0010	/* find directories, too	*/
 #define		ATTR_DEV	0x0040	/* Attribute returned for Device*/
+#define		ATTR_LFN	0x000f	/* combination for LFN entries	*/
 
 #define STDIN		0	/* Standard Console Input Handle	*/
 #define STDOUT		1	/* Standard Console Output Handle	*/ 

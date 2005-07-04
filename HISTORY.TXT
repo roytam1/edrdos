@@ -13,6 +13,20 @@
   beep if wrong key has been pressed instead of simply selecting 'no'
 - added option to run through the rest of config.sys in single-stepping mode by
   hitting the R or <ESC> key
+(4.7.2005):
+- made VOL and DIR commands skip LFNs when looking for the volume label
+- changed delete file routine to also delete all LFNs preceding a dir entry
+- made dir removal routine regard LFNs as empty when checking if a dir is still
+  in use
+- made file rename/move routine delete LFNs both for old and new entry
+- fixed bug that caused the COLOUR command in config.sys to be repeated
+  endlessly when it was used in single-stepping or query mode
+- changed CLS command to use the colours set with the COLOUR command again
+  after clearing the screen
+- made COLOUR command also apply the new fore and background colour to the
+  screen immediately
+- also added alternate keys and run-through option to the single-stepping mode
+  of autoexec.bat
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

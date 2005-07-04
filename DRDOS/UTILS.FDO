@@ -835,6 +835,9 @@ rmdir_ok1:
 	 je	rmdir_ok3		;    yes, no problems yet...
 	cmp	DNAME[di],'.'		; is it "." or ".."?
 	 je	rmdir_ok3
+	mov	bx,di
+	call	is_lfn			; check if it is a long filename
+	 jc	rmdir_ok3		; we do not care for orphaned LFNs
 if DELWATCH
 ; We have found a dir entry - better check if it is a pending delete
 ; and that delwatch is installed. Then we can ignore it.
@@ -1445,6 +1448,7 @@ toupper_intl:
 eject
 kill_file:	; release clusters for file/dir and delete entry
 ;---------
+	call	del_lfn			; delete any preceding LFN entries
 	mov	bx,dirp			; get pointer to directory entry
 if DELWATCH
 	call	hdsblk			; AX = directory root cluster

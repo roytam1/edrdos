@@ -1972,6 +1972,9 @@ BYTE *path;
 	else {	
 	    printf(MSG_LBL, ddrive+'A');
 
+	    while (!ret && (search.fattr==ATTR_LFN))
+	      ret = ms_x_next(&search);		/* skip LFN entries */
+
 	    if (ret)
 		printf(MSG_NOLBL);
 	    else {

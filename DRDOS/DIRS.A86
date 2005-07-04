@@ -131,6 +131,7 @@ eject
 	public	hshdscrd
 	public	mkhsh
 	public	setenddir
+	public	rd_pcdir
 eject
 
 fill_dirbuf:	;get 32 byte directory entry

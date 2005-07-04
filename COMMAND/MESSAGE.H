@@ -92,6 +92,7 @@ extern char near msg_oklbl[];
 extern char near msg_on[];
 extern char near msg_onoff[];
 extern char near msg_optline[];
+extern char near msg_optline2[];
 extern char near msg_outactive[];
 extern char near msg_path[];
 extern char near msg_pathdrv[];

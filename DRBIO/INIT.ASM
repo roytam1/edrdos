@@ -221,7 +221,7 @@ con_drvr	dw	CG:aux_drvr, 0	; link to next device driver
 		dw	DA_CHARDEV+DA_SPECIAL+DA_ISCOT+DA_ISCIN+DA_IOCTL
 		dw	CG:strat, CG:IntCon
 		db	'CON     '
-col_mode	dw	15
+col_mode	dw	15,0
 
 aux_drvr	dw	CG:prn_drvr, 0		; link to next device driver
 		dw	DA_CHARDEV

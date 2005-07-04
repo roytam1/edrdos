@@ -3082,7 +3082,33 @@ _int10_cls:
 	and	al,7fh
 	mov	ah, 0			; set mode, clear screen (al bit 7 clear)
 	int	10h
-	
+
+	push	es
+	mov	ah,52h			; get List of Lists address
+	int	21h
+	les	bx,F52_CONDEV		; address of console device driver
+	mov	ax,es:18[bx]		; COLOUR command active?
+	cmp	ah,01
+	 jne	int10_cls10		; no, then skip
+	push	ax
+	mov	bx,es:20[bx]		; colour of the border
+	xor	bh,bh			; set border/background colour
+	mov	ah,0bh
+	int	10h
+	pop	ax
+	mov	dx,40h			; BIOS data segment
+	mov	es,dx
+	xor	bx,bx
+	xor	cx,cx
+	mov	dh,byte ptr es:84h[bx]
+	mov	dl,byte ptr es:4ah[bx]
+	dec	dl
+	mov	bh,al			; character colour
+	mov	ax,600h
+	int	10h
+
+int10_cls10:
+	pop	es
 	call	cginfo			; has resolution changed?
 	pop	ax			; restore screen lines
 
