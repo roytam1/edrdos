@@ -27,6 +27,22 @@
   screen immediately
 - also added alternate keys and run-through option to the single-stepping mode
   of autoexec.bat
+(6.12.2005):
+- added support for decompressing DRDOS.SYS files compressed with Pack v1.00
+- added option /F to SWITCHES command, restructured config.sys processing to
+  wait for F5/F8 keys after SWITCHES has been processed
+- fixed bug in disk R/W routine that failed to update the LBA block number for
+  subsequent read/write attempts if the previous transfer was only partially
+  completed
+- fixed bug in partition login routines that caused dedicated LBA partitions
+  (type 0C/0Eh) within the CHS boundaries to be logged as CHS partitions
+- made control flow commands GOTO/GOSUB/RETURN/EXIT/SWITCH persistent in most
+  config.sys phases to make them work with (HI)INSTALLLAST
+- changed routine for SWITCH command to remember the option the user selected
+  in the main config.sys pass to keep it from asking again
+- fixed bug that caused DR-DOS to hang on delete/rename operations when the
+  boundary to the previous directory cluster was crossed while looking for
+  preceding LFN entries
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

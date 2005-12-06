@@ -83,6 +83,8 @@ ENDM
 
 F5KEY		equ	3F00h
 F8KEY		equ	4200h
+
+SWITCH_F	equ	01h
 	
 IVECT	segment	at 0000h
 
@@ -165,6 +167,7 @@ CODE	segment 'CODE'
 	extrn	init_runit:byte
 	extrn	comspec_drv:byte
 	extrn	init_flags:word
+	extrn	boot_switches:byte
 
 
 include	biosmsgs.def			; Include TFT Header File
@@ -830,8 +833,12 @@ SaveVectors:
 
 	Assume	DS:CGROUP, ES:CGROUP
 
-	call	get_boot_options	; look for user keypress
-	mov	boot_options,ax		;  return any options
+	mov	si,offset CGROUP:drdosprojects_msg
+	call	output_msg
+	mov	si,offset CGROUP:starting_dos_msg
+	call	output_msg
+;	call	get_boot_options	; look for user keypress
+;	mov	boot_options,ax		;  return any options
 
 	mov	ah,EXT_MEMORY
 	int	SYSTEM_INT		; find out how much extended memory
@@ -969,67 +976,69 @@ output_hex30:
 	ret
 output_hex40	db	20h,NUL		; end of string
 
-get_boot_options:
-;----------------
-; On Entry:
-;	None
-; On Exit:
-;	AX = boot options
-	mov	si,offset CGROUP:drdosprojects_msg
-	call	output_msg
-	mov	si,offset CGROUP:starting_dos_msg
-	call	output_msg
-	call	option_key		; poll keyboard for a while
-	 jnz	get_boot_options20	; if key available return that
-	mov	ah,2			; else ask ROS for shift state
-	int	16h
-	and	ax,3			; a SHIFT key is the same as F5KEY
-	 jz	get_boot_options20
-	mov	ax,F5KEY		; ie. bypass everything
-get_boot_options20:
-	ret
-
-option_key:
-;----------
-; On Entry:
-;	None
-; On Exit:
-;	AX = keypress if interesting (F5/F8)
-;	ZF clear if we have an interesting key
+;get_boot_options:
+;;----------------
+;; On Entry:
+;;	None
+;; On Exit:
+;;	AX = boot options
+;	mov	si,offset CGROUP:drdosprojects_msg
+;	call	output_msg
+;	mov	si,offset CGROUP:starting_dos_msg
+;	call	output_msg
+;	call	option_key		; poll keyboard for a while
+;	 jnz	get_boot_options20	; if key available return that
+;	mov	ah,2			; else ask ROS for shift state
+;	int	16h
+;	and	ax,3			; a SHIFT key is the same as F5KEY
+;	 jz	get_boot_options20
+;	mov	ax,F5KEY		; ie. bypass everything
+;get_boot_options20:
+;	ret
 ;
-; Poll keyboard looking for a key press. We do so for a maximum of 36 ticks
-; (approx 2 seconds).
+;option_key:
+;;----------
+;; On Entry:
+;;	None
+;; On Exit:
+;;	AX = keypress if interesting (F5/F8)
+;;	ZF clear if we have an interesting key
+;;
+;; Poll keyboard looking for a key press. We do so for a maximum of 36 ticks
+;; (approx 2 seconds).
+;;
+;	xor	ax,ax
+;	int	1Ah			; get ticks in DX
+;	mov	cx,dx			; save in CX for later
+;option_key10:
+;	push	cx		
+;	mov	ah,1
+;	int	16h			; check keyboard for key
+;	pop	cx
+;	 jnz	option_key30		; stop if key available
+;	cmp	boot_switches,SWITCH_F	; SWITCHES /F present?
+;	 je	option_key20		; yes, skip delay
+;	push	cx
+;	xor	ax,ax
+;	int	1Ah			; get ticks in DX
+;	pop	cx
+;	sub	dx,cx			; work out elapsed time
+;	cmp	dx,36			; more than 2 secs ?
+;	 jb	option_key10
+;option_key20:
+;	xor	ax,ax			; timeout, set ZF, no key pressed
+;	ret
 ;
-	xor	ax,ax
-	int	1Ah			; get ticks in DX
-	mov	cx,dx			; save in CX for later
-option_key10:
-	push	cx		
-	mov	ah,1
-	int	16h			; check keyboard for key
-	pop	cx
-	 jnz	option_key30		; stop if key available
-	push	cx
-	xor	ax,ax
-	int	1Ah			; get ticks in DX
-	pop	cx
-	sub	dx,cx			; work out elapsed time
-	cmp	dx,36			; more than 2 secs ?
-	 jb	option_key10
-option_key20:
-	xor	ax,ax			; timeout, set ZF, no key pressed
-	ret
-
-option_key30:
-	cmp	ax,F5KEY		; if it is a key we want then
-	 je	option_key40		;  read it, else just leave
-	cmp	ax,F8KEY		;  in the type-ahead buffer
-	 jne	option_key20
-option_key40:
-	xor	ax,ax
-	int	16h			; read the key
-	test	ax,ax			; clear ZF to indicate we have a key
-	ret
+;option_key30:
+;	cmp	ax,F5KEY		; if it is a key we want then
+;	 je	option_key40		;  read it, else just leave
+;	cmp	ax,F8KEY		;  in the type-ahead buffer
+;	 jne	option_key20
+;option_key40:
+;	xor	ax,ax
+;	int	16h			; read the key
+;	test	ax,ax			; clear ZF to indicate we have a key
+;	ret
 
 ICODE	ends
 

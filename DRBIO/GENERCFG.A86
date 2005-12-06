@@ -87,6 +87,11 @@ FALSE	   	equ	0		; value of FALSE
 F5KEY		equ	3F00h		; keys returned by BIOS
 F8KEY		equ	4200h		;  in boot_options
 
+SWITCH_F	equ	01h		; in boot_switches
+SWITCH_N	equ	02h
+
+SWITCH_MAX	equ	10		; maximum number of SWITCH commands
+
 CGROUP		group	INITCODE, INITDATA, INITENV
 
 INITCODE	CSEG	PARA 'INITCODE'
@@ -230,17 +235,18 @@ cfg_query:
 ;
 	push	si
 	push	di
-	cmp	configpass,2
-	 jb	cfg_query05
-	test	CFG_FLAGS[di],CF_LAST
-	stc
-	 jnz	cfg_query06
-	jmp	cfg_query90
+	mov	dx,CFG_FLAGS[di]	; flags for this config command
+	cmp	configpass,0		; CF_ALL does not include pass 0
+	 je	cfg_query05		; so skip the test in this pass
+	test	dx,CF_ALL		; present in all phases?
+	 jnz	cfg_query06		; yes, then execute it
 cfg_query05:
-	test	CFG_FLAGS[di],CF_LAST
+	and	dl,CF_NOF-1		; config pass to execute in
+	cmp	dl,configpass		; does the phase number match?
+	 je	cfg_query06		; yes
 	stc
-	 jz	cfg_query06
-	jmp	cfg_query90
+	jmp	cfg_query90		; else skip the command
+
 cfg_query06:
 	test	CFG_FLAGS[di],CF_NOF	; are Function Keys allowed ?
 ;	clc				; if not process the command
@@ -1135,9 +1141,15 @@ func_switches:		; SWITCHES=...
 	 je	func_switches10
 	cmp	ah,CR			; check for end-of-line
 	 je	func_switches10
+	cmp	ax,'F/'
+	 jne	func_switches05
+	or	boot_switches,SWITCH_F
+	jmps	func_switches
+func_switches05:
 	cmp	ax,'N/'
 	 jne	func_switches
-	mov	boot_options,0		; disable boot options
+;	mov	boot_options,0		; disable boot options
+	or	boot_switches,SWITCH_N	; disable boot options
 func_switches10:
 	ret
 
@@ -2056,6 +2068,8 @@ func_chain10:
 
 func_switch:				; SWITCH=option0, option1
 ; GOSUB to appropriate label
+	cmp	configpass,1
+	 ja	func_switch05
 	call	wait_for_key		; wait until a key is pressed
 	 jc	func_switch01		; ignore if timeout
 	mov	ah,MS_C_RAWIN
@@ -2073,11 +2087,47 @@ func_switch02:
 	 jns	func_switch05
 	mov	al,10			; make '0' into 10
 func_switch05:
+	mov	di,0
+	xor	bx,bx
+	mov	cx,cfg_seeklo
+	mov	dx,cfg_seekhi
+	sub	cx,cfg_tail
+	sbb	dx,0
+	add	cx,cfg_head
+	adc	dx,0
+func_switch06:
+	cmp	di,cfg_switchnum
+	 jae	func_switch10
+	cmp	word ptr cfg_switchbuf[bx],cx
+	 jne	func_switch07
+	cmp	word ptr cfg_switchbuf+2[bx],dx
+	 je	func_switch11
+func_switch07:
+	cmp	di,SWITCH_MAX
+	 jae	func_switch11
+	inc	di
+	add	bx,5
+	jmps	func_switch06
+func_switch10:
+	cmp	configpass,1
+	 ja	func_switch12
+	inc	di
+	mov	cfg_switchnum,di
+func_switch11:
+	cmp	configpass,1
+	 ja	func_switch12
+	mov	word ptr cfg_switchbuf[bx],cx
+	mov	word ptr cfg_switchbuf+2[bx],dx
+	mov	cfg_switchbuf+4[bx],al
+	jmps	func_switch15
+func_switch12:
+	mov	al,cfg_switchbuf+4[bx]
+func_switch15:
 	cbw				; AX = lines to skip
 	xchg	ax,cx			; make CX the loop count
 	 jcxz	func_switch30
 	mov	bx,si			; BX -> saved command line start
-func_switch10:
+func_switch20:
 	push	bx
 	push	cx
 	mov	di,offset dev_name	; copy and discard a label
@@ -2091,13 +2141,13 @@ func_switch10:
 	pop	cx
 	pop	bx
 	 jc	func_switch40		; stop at end of line
-	loop	func_switch10
+	loop	func_switch20
 func_switch30:
 	jmp	func_gosub		; execute a GOSUB
 
 func_switch40:
 	mov	si,bx			; retract to start of line
-	jmps	func_switch		;  then back to sleep again
+	jmp	func_switch		;  then back to sleep again
 
 func_gosub:		; GOSUB="label"
 ;----------
@@ -3665,12 +3715,16 @@ cfg_file	db	'DCONFIG.SYS',0	; Configuration File
 		rb	64		; space for bigger CHAIN'd file
 cfg_file_end	rb	0
 
+	Public	cfg_seeklo,cfg_seekhi
 cfg_seeklo	dw	0		; offset we have reached in CONFIG file
 cfg_seekhi	dw	0		; in case Richards CONFIG file > 64k
 
-	Public	cfg_head
+	Public	cfg_head,cfg_tail
 cfg_head	dw	0		; offset we are at in CONFIG_BUF
 cfg_tail	dw	0		; # bytes currently in CONFIG_BUF
+
+cfg_switchnum	dw	0		; number of SWITCH decisions stored
+cfg_switchbuf	rb	5*SWITCH_MAX	; buffer for config lines/key presses
 
 cfg_buffer	rb	CFG_BUF_LEN	; individual lines live here
 
@@ -3774,68 +3828,69 @@ CFG_FUNC	equ	word ptr .0002h		; Command Subroutine
 CFG_FLAGS	equ	word ptr .0004h		; Command flags
 CFG_SIZE	equ	6			; Size of each Entry
 
-CF_NOF		equ	0001h		; set if F5/F8 should be ignored
-CF_LC		equ	0002h		; set if case should be preserved
-CF_QUERY	equ	0004h		; set at run time eg. "DEVICE?"
-CF_LAST		equ	0020h		; execute in last config pass
+CF_LAST		equ	0003h		; execute in last config pass
+CF_NOF		equ	0008h		; set if F5/F8 should be ignored
+CF_LC		equ	0010h		; set if case should be preserved
+CF_QUERY	equ	0020h		; set at run time eg. "DEVICE?"
+CF_ALL		equ	0040h		; execute in all config passes
 
 cfg_table	rw	0
 if not ADDDRV
-	dw	cmd_country,	func_country,	0	; COUNTRY=nnn,nnn,country
-	dw	cmd_shell,	func_shell,	0	; SHELL=filename
-	dw	cmd_lastdrive,	func_lastdrive,	0	; LASTDRIVE=d:
-	dw	cmd_hilastdrive,func_hilastdrive,0	; HILASTDRIVE=d:
-	dw	cmd_break,	func_break,	0	; BREAK=ON/OFF
-	dw	cmd_buffers,	func_buffers,	0	; BUFFERS=nn
-	dw	cmd_hibuffers,	func_hibuffers,	0	; HIBUFFERS=nn
-	dw	cmd_fcbs,	func_fcbs,	0	; FCBS=nn
-	dw	cmd_hifcbs,	func_hifcbs,	0	; HIFCBS=nn
-	dw	cmd_files,	func_files,	0	; FILES=nn
-	dw	cmd_hifiles,	func_hifiles,	0	; HIFILES=nn
-	dw	cmd_stacks,	func_stacks,	0	; STACKS=nn
-	dw	cmd_histacks,	func_histacks,	0	; HISTACKS=nn
-	dw	cmd_fastopen,	func_fastopen,	0	; FASTOPEN=nnn
-	dw	cmd_drivparm,	func_drivparm,	0	; DRIVPARM=/d:nn ...
-	dw	cmd_history,	func_history,	0	; HISTORY=ON|OFF,NNN
+	dw	cmd_country,	func_country,	1	; COUNTRY=nnn,nnn,country
+	dw	cmd_shell,	func_shell,	1	; SHELL=filename
+	dw	cmd_lastdrive,	func_lastdrive,	1	; LASTDRIVE=d:
+	dw	cmd_hilastdrive,func_hilastdrive,1	; HILASTDRIVE=d:
+	dw	cmd_break,	func_break,	1	; BREAK=ON/OFF
+	dw	cmd_buffers,	func_buffers,	1	; BUFFERS=nn
+	dw	cmd_hibuffers,	func_hibuffers,	1	; HIBUFFERS=nn
+	dw	cmd_fcbs,	func_fcbs,	1	; FCBS=nn
+	dw	cmd_hifcbs,	func_hifcbs,	1	; HIFCBS=nn
+	dw	cmd_files,	func_files,	1	; FILES=nn
+	dw	cmd_hifiles,	func_hifiles,	1	; HIFILES=nn
+	dw	cmd_stacks,	func_stacks,	1	; STACKS=nn
+	dw	cmd_histacks,	func_histacks,	1	; HISTACKS=nn
+	dw	cmd_fastopen,	func_fastopen,	1	; FASTOPEN=nnn
+	dw	cmd_drivparm,	func_drivparm,	1	; DRIVPARM=/d:nn ...
+	dw	cmd_history,	func_history,	1	; HISTORY=ON|OFF,NNN
 	dw	cmd_hiinstalllast,func_hiinstall,CF_LAST; HIINSTALLLAST=cmdstring
-	dw	cmd_hiinstall,	func_hiinstall,	0	; HIINSTALL=cmdstring
-	dw	cmd_installhigh, func_hiinstall, 0	; INSTALLHIGH=cmdstring
+	dw	cmd_hiinstall,	func_hiinstall,	1	; HIINSTALL=cmdstring
+	dw	cmd_installhigh, func_hiinstall, 1	; INSTALLHIGH=cmdstring
 	dw	cmd_installlast,func_install,	CF_LAST	; INSTALLLAST=cmdstring
-	dw	cmd_install,	func_install,	0	; INSTALL=cmdstring
-	dw	cmd_hidos,	func_hidos,	0	; HIDOS=ON/OFF
-	dw	cmd_dosdata,	func_dosdata,	0	; DOSDATA=UMB
-	dw	cmd_ddscs,	func_ddscs,	0	; DDSCS=HIGH,UMB
-	dw	cmd_xbda,	func_xbda,	0	; XBDA=LOW,UMB
-	dw	cmd_dos,	func_dos,	0	; DOS=HIGH
-	dw	cmd_set,	func_set,	CF_LC	; SET envar=string
+	dw	cmd_install,	func_install,	1	; INSTALL=cmdstring
+	dw	cmd_hidos,	func_hidos,	1	; HIDOS=ON/OFF
+	dw	cmd_dosdata,	func_dosdata,	1	; DOSDATA=UMB
+	dw	cmd_ddscs,	func_ddscs,	1	; DDSCS=HIGH,UMB
+	dw	cmd_xbda,	func_xbda,	1	; XBDA=LOW,UMB
+	dw	cmd_dos,	func_dos,	1	; DOS=HIGH
+	dw	cmd_set,	func_set,	1+CF_LC	; SET envar=string
 	dw	cmd_switches,	func_switches,	CF_NOF	; SWITCHES=...
 endif
-	dw	cmd_hidevice,	func_hidevice,	0	; HIDEVICE=filename
-	dw	cmd_devicehigh,	func_hidevice,	0	; DEVICEHIGH=filename
-	dw	cmd_device,	func_device,	0	; DEVICE=filename
-	dw	cmd_remark,	func_remark,	CF_NOF	; REM Comment
-	dw	cmd_semicolon,	func_remark,	CF_NOF	; ; Comment
-	dw	cmd_colon,	func_remark,	CF_NOF	; :label
-	dw	cmd_chain,	func_chain,	0	; CHAIN=filename
-	dw	cmd_goto,	func_goto,	0	; GOTO=label
-	dw	cmd_gosub,	func_gosub,	0	; GOSUB=label
-	dw	cmd_return,	func_return,	0	; RETURN (from GOSUB)
-	dw	cmd_cls,	func_cls,	0	; Clear Screen
-	dw	cmd_cpos,	func_cpos,	0	; Set Cursor Position
-	dw	cmd_colour,	func_colour,	0	; Set Fore-/Background/Border Colour
-	dw	cmd_timeout,	func_timeout,	0	; set ? TIMEOUT
-	dw	cmd_switch,	func_switch,	0	; SWITCH=n
-	dw	cmd_onerror,	func_onerror,	CF_LC	; ONERROR='n' optional command
+	dw	cmd_hidevice,	func_hidevice,	1	; HIDEVICE=filename
+	dw	cmd_devicehigh,	func_hidevice,	1	; DEVICEHIGH=filename
+	dw	cmd_device,	func_device,	1	; DEVICE=filename
+	dw	cmd_remark,	func_remark,	1+CF_NOF; REM Comment
+	dw	cmd_semicolon,	func_remark,	1+CF_NOF; ; Comment
+	dw	cmd_colon,	func_remark,	1+CF_NOF; :label
+	dw	cmd_chain,	func_chain,	CF_ALL	; CHAIN=filename
+	dw	cmd_goto,	func_goto,	CF_ALL	; GOTO=label
+	dw	cmd_gosub,	func_gosub,	CF_ALL	; GOSUB=label
+	dw	cmd_return,	func_return,	CF_ALL	; RETURN (from GOSUB)
+	dw	cmd_cls,	func_cls,	1	; Clear Screen
+	dw	cmd_cpos,	func_cpos,	1	; Set Cursor Position
+	dw	cmd_colour,	func_colour,	1	; Set Fore-/Background/Border Colour
+	dw	cmd_timeout,	func_timeout,	1	; set ? TIMEOUT
+	dw	cmd_switch,	func_switch,	1+CF_ALL; SWITCH=n
+	dw	cmd_onerror,	func_onerror,	1+CF_ALL+CF_LC; ONERROR='n' optional command
 	dw	cmd_query,	func_query, CF_NOF+CF_LC; ?optional command
-	dw	cmd_echo,	func_echo,	CF_LC	; ECHO=string
-	dw	cmd_exit,	func_exit,	0	; EXIT
-	dw	cmd_error,	func_error,	0	; ERROR='n'
-	dw	cmd_getkey,	func_getkey,	0	; GETKEY
-	dw	cmd_yeschar,	func_yeschar,	0	; YESCHAR=
-	dw	cmd_deblock,	func_deblock,	0	; DEBLOCK=xxxx
-	dw	cmd_numlock,	func_numlock,	0	; NUMLOCK=ON/OFF
-	dw	cmd_version,	func_version,	0	; VERSION=x.xx
-	dw	cmd_common,	func_common,	0	; [COMMON]
+	dw	cmd_echo,	func_echo,	1+CF_LC	; ECHO=string
+	dw	cmd_exit,	func_exit,	CF_ALL	; EXIT
+	dw	cmd_error,	func_error,	1+CF_ALL; ERROR='n'
+	dw	cmd_getkey,	func_getkey,	1	; GETKEY
+	dw	cmd_yeschar,	func_yeschar,	1	; YESCHAR=
+	dw	cmd_deblock,	func_deblock,	1	; DEBLOCK=xxxx
+	dw	cmd_numlock,	func_numlock,	1	; NUMLOCK=ON/OFF
+	dw	cmd_version,	func_version,	1	; VERSION=x.xx
+	dw	cmd_common,	func_common,	1	; [COMMON]
  	dw	0				; end of table
 
 if not ADDDRV
@@ -3934,8 +3989,9 @@ INITENV		DSEG	PARA 'INITDATA'
 envstart	rb	253		; initial env buffer
 envend		dw	0		; make it double null terminated
 		db	1Ah		; EOF marker env buffer
-	Public	boot_options
+	Public	boot_options, boot_switches
 boot_options	dw	0
+boot_switches	db	0
 ; set by BIOS to either the SHIFT states, or to F5KEY or F8KEY
 
 EXE_LENGTH	equ	001Ch

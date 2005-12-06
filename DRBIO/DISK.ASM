@@ -1303,6 +1303,17 @@ trkrw80:
 	mov	ax,P_MCNT[bp]		; get physical transfer length
 	sub	P_COUNT[bp],ax		; subtract from total transfer length
 	 jz	trkrw90			; exit if none left
+trkrw85_lba:
+	test	es:UDSC_INT13BITS[di],1	; LBA supported on this drive?
+	 jz	trkrw85			; no, then use CHS routine
+	xor	ah,ah			; update current LBA
+	add	word ptr P_LBABLOCK[bp],ax
+	adc	word ptr p_LBABLOCK+2[bp],0
+	mov	ah,SECSIZE/16
+	mul	ah			; AX = paras to inc DMA address
+	add	P_DMASEG[bp],ax		; update DMA segment
+	jmps	trkrw90
+trkrw85:
 	add	P_SECTOR[bp],al		; update current sector
 	mov	ah,SECSIZE/16
 	mul	ah			; AX = paras to inc DMA address
@@ -2740,11 +2751,13 @@ login_primary:
 	mov	word ptr partend+2,ax
 	sub	word ptr partend,1	; minus one
 	sbb	word ptr partend+2,0
+	mov	al,[si+4]		; get partition type
+	mov	parttype,al
 	test	int13ex_bits,1		; LBA support present?
 	 jnz	login_p0		; yes, then proceed normally
-	cmp	byte ptr [si+4],FAT16X_ID	; LBA partition?
+	cmp	parttype,FAT16X_ID	; LBA partition?
 	 je	login_p9		; ignore this if LBA support not present
-	cmp	byte ptr [si+4],FAT32X_ID	; LBA partition?
+	cmp	parttype,FAT32X_ID	; LBA partition?
 	 je	login_p9		; ignore this if LBA support not present
 	mov	ax,word ptr partend+2	; partition within CHS bounds?
 	cmp	ax,word ptr partend_max+2
@@ -2782,9 +2795,9 @@ login_p9:
 
 log_p0:
 	call	new_unit		; ES:DI -> new UDSC
-	cmp	byte ptr [si+4],FAT16X_ID	; LBA partition?
+	cmp	parttype,FAT16X_ID	; LBA partition?
 	 je	log_p0a			; yes, then always use LBA
-	cmp	byte ptr [si+4],FAT32X_ID	; LBA partition?
+	cmp	parttype,FAT32X_ID	; LBA partition?
 	 je	log_p0a			; yes, then always use LBA
 	mov	ax,word ptr partend+2	; test if beyond CHS barrier
 	cmp	ax,word ptr partend_max+2
@@ -3205,6 +3218,7 @@ extoffset	dd	0		; block offset of extended partition
 ptstart		dd	0		; block offset of current partition table
 lastpart	dd	0		; last checked partition
 extoffvalid	db	0		; extoffset valid flag
+parttype		db	0		; ID of partition
 
 	Public	init_runit
 init_runit	db	0		; poked with ROS Unit at boot

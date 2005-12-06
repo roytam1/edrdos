@@ -94,12 +94,19 @@ INIT_CODE	equ	word ptr  .000Eh	; Start of initialisation code
 DOS_FLAG	equ	word ptr  .001Ch	; Compressed Data Flag
 DOS_CODE	equ	word ptr  .001Eh	; DOS Code Length (Bytes)
 DOS_DATA	equ	word ptr  .0020h	; DOS Data Length (Bytes)
+UPX_POS		equ	word ptr  .0024h	; position of UPX signature
 NO_YES_CHARS	equ	word ptr  .0028h	; DOS Data No/Yes characters
 
 INT31_SEGMENT	equ	word ptr .00C6h		; DOS Data Segment pointer
 						; for ROM systems
 JMPF_OPCODE	equ	0EAh			; 8086 JMPF instruction
 
+F5KEY		equ	3F00h
+F8KEY		equ	4200h
+
+SWITCH_F	equ	01h
+SWITCH_N	equ	02h
+	
 INITCODE	CSEG	PARA 'INITCODE'
 	extrn	cleanup:near			; BIOS Clean Up routine
 	extrn	config_init:near		; CONFIG Code Init
@@ -305,6 +312,26 @@ dos_reloc:
 	mov	dos_cseg,ax		; Update the DOS Code Segment
 	mov	ds,ax
 
+	mov	ax,UPX_POS		; test for UPX compression
+	cmp	ax,cs:word ptr UPX_SIGN
+	 jne	dos_noupx		; not UPX-compressed
+	mov	ax,UPX_POS+2
+	cmp	ax,cs:word ptr UPX_SIGN+2
+	 jne	dos_noupx
+	push	ds
+	push	cs			; return address after decompression
+	mov	ax,offset dos_upx
+	push	ax
+	mov	ax,ds			; entry point of decompression stub
+	sub	ax,10h
+	push	ax
+	mov	ax,100h
+	push	ax
+	retf				; unpack DRDOS.SYS
+dos_upx:
+	pop	ds
+dos_noupx:
+
 	mov	cl,4
 
 	mov	ax,ds:DOS_CODE		; get size of DOS code
@@ -487,6 +514,72 @@ load_e10:
 	jmps	load_e10
 
 eject
+
+	Public	get_boot_options
+get_boot_options:
+;----------------
+; On Entry:
+;	None
+; On Exit:
+;	AX = boot options
+	call	option_key		; poll keyboard for a while
+	 jnz	get_boot_options20	; if key available return that
+	test	boot_switches,SWITCH_N	; boot keys disabled?
+	 jnz	get_boot_options20	; then do not check shift key, either
+	mov	ah,2			; else ask ROS for shift state
+	int	16h
+	and	ax,3			; a SHIFT key is the same as F5KEY
+	 jz	get_boot_options20
+	mov	ax,F5KEY		; ie. bypass everything
+get_boot_options20:
+	ret
+
+option_key:
+;----------
+; On Entry:
+;	None
+; On Exit:
+;	AX = keypress if interesting (F5/F8)
+;	ZF clear if we have an interesting key
+;
+; Poll keyboard looking for a key press. We do so for a maximum of 36 ticks
+; (approx 2 seconds).
+;
+	xor	ax,ax
+	int	1Ah			; get ticks in DX
+	mov	cx,dx			; save in CX for later
+option_key10:
+	push	cx		
+	mov	ah,1
+	int	16h			; check keyboard for key
+	pop	cx
+	 jnz	option_key30		; stop if key available
+	test	boot_switches,SWITCH_F	; SWITCHES /F present?
+	 jnz	option_key20		; yes, skip delay
+	push	cx
+	xor	ax,ax
+	int	1Ah			; get ticks in DX
+	pop	cx
+	sub	dx,cx			; work out elapsed time
+	cmp	dx,36			; more than 2 secs ?
+	 jb	option_key10
+option_key20:
+	xor	ax,ax			; timeout, set ZF, no key pressed
+	ret
+
+option_key30:
+	test	boot_switches,SWITCH_N	; boot keys disabled?
+	 jnz	option_key20		; yes, continue without reading it
+	cmp	ax,F5KEY		; if it is a key we want then
+	 je	option_key40		;  read it, else just leave
+	cmp	ax,F8KEY		;  in the type-ahead buffer
+	 jne	option_key20
+option_key40:
+	xor	ax,ax
+	int	16h			; read the key
+	test	ax,ax			; clear ZF to indicate we have a key
+	ret
+
 ;
 ;	Initialise the PSP and inform DOS of the
 ;	location of the BIOSINIT PSP. The MS_P_SETPSP *MUST* be the first 
@@ -629,8 +722,11 @@ config_end20:
 
 	call	relocate_system		; relocate system as requested
 
-	mov	configpass,2
+	mov	configpass,3
 	mov	cfg_head,0
+	mov	cfg_tail,0
+	mov	cfg_seeklo,0
+	mov	cfg_seekhi,0
 	call	preload_done
 
 	push	es			; Free all of the unused memory
@@ -1897,6 +1993,11 @@ include	initmsgs.def				; Include TFT Header File
 	extrn	configPass:byte
 	extrn	part_off:word
 	extrn	cfg_head:word
+	extrn	cfg_tail:word
+	extrn	cfg_seeklo:word
+	extrn	cfg_seekhi:word
+	extrn	boot_options:word
+	extrn	boot_switches:byte
 
 ;
 ;	PUBLIC Variables which are initialised by the BIOS before the
@@ -2085,6 +2186,8 @@ stack		rw	0
 res_dev_count	db	0
 dosdata_len	dw	0
 int_stubs_seg	dw	0
+
+UPX_SIGN	db	'UPX!'
 
 INITPSP		DSEG	PARA 'INITDATA'
 		db	'Z'			; dummy DMD header
