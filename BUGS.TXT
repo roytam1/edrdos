@@ -47,3 +47,13 @@ with older software:
   Also, because of enhancements of the internal memory handling, some older TSR
   programs might not work properly if you load them with INSTALL/HIINSTALL in
   config.sys. If that is the case, use INSTALLLAST/HIINSTALLLAST instead.
+
+Starting with version 7.01.08 WIP (15.1.2006), Enhanced DR-DOS supports the
+FAT+ filesystem extension which allows files to become as large as 256 GB - 1,
+space on the drive permitting. This support is automatic and does not require
+any changes to existing drives. FAT+ is fully downward compatible with FAT for
+drives which only contain files that are below the 4 GB limit of the older FAT
+filesystem in size. To prevent non-FAT+-aware OSes from accidentally accessing
+FAT32+ drives which contain larger files, it is recommended to set the FAT32
+version number in the boot block of these drives to 0.1 (major version 0, minor
+version 1) to indicate that they should not mount these drives.

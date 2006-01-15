@@ -768,16 +768,27 @@ fdos_read:
 	call	local_disk		; get MXdisk, switch stack
 	call	verify_handle		; check if legal file handle
 	mov	cx,fdos_pb+8		; get requested transfer length
-	mov	ax,es:DHNDL_POSLO[bx]	; If we get an error we want to have
-	mov	dx,es:DHNDL_POSHI[bx]	; xfer len adjusted for EOF (CopyIIpc)
-	sub	ax,es:DHNDL_SIZELO[bx]	; are we beyond EOF ?
-	sbb	dx,es:DHNDL_SIZEHI[bx]
+;	mov	ax,es:DHNDL_POSLO[bx]	; If we get an error we want to have
+;	mov	dx,es:DHNDL_POSHI[bx]	; xfer len adjusted for EOF (CopyIIpc)
+;	sub	ax,es:DHNDL_SIZELO[bx]	; are we beyond EOF ?
+;	sbb	dx,es:DHNDL_SIZEHI[bx]
+	mov	ax,es:DHNDL_POSLO[bx]
+	sub	ax,es:DHNDL_SIZELO[bx]
+	mov	dx,ax
+	mov	ax,es:DHNDL_POSHI[bx]
+	sbb	ax,es:DHNDL_SIZEHI[bx]
+	mov	ax,es:DHNDL_POSXLO[bx]
+	sbb	ax,es:DHNDL_SIZEXLO[bx]
+	mov	ax,es:DHNDL_POSXHI[bx]
+	sbb	ax,es:DHNDL_SIZEXHI[bx]
 ;	 jb	read2			; beyond EOF already, no action required
 ;	 ja	read2			; more the 64K to go, no problems
 	 jnz	read2
-	cmp	ax,cx			; do we want more than there is?
+;	cmp	ax,cx			; do we want more than there is?
+	cmp	dx,cx			; do we want more than there is?
 	 jae	read2			; yes, shorten the fdos_pb count
-	sub	fdos_pb+8,ax		;  in case of a critical error
+;	sub	fdos_pb+8,ax		;  in case of a critical error
+	sub	fdos_pb+8,dx		;  in case of a critical error
 read2:
 	mov	fdrwflg,1		; we're reading
 	les	di,dword ptr fdos_pb+4	; get disk transfer address
@@ -951,7 +962,10 @@ fdos_lseek:
 	call	vfy_dhndl_ptr		; check file handle #
 	call	redir_dhndl_offer
 	test	es:DHNDL_ATTR[bx],DHAT_DEV
-	 jnz	lseek_dev		; skip if character device
+;	 jnz	lseek_dev		; skip if character device
+	 jz	lseek01
+	jmp	lseek_dev		; skip if character device
+lseek01:
 	call	local_disk		; get MXdisk, switch stack
 	call	check_handle		; check if legal file handle
 	mov	ax,fdos_pb+4		; get 32-bit file offset
@@ -968,16 +982,60 @@ lseek1:
 	ret				; return error code
 
 lseek2:					; seek mode 1: relative to position
-	add	ax,es:DHNDL_POSLO[bx]
-	adc	dx,es:DHNDL_POSHI[bx]
-	jmps	lseek4			; update new position
+;	add	ax,es:DHNDL_POSLO[bx]
+;	adc	dx,es:DHNDL_POSHI[bx]
+	add	es:DHNDL_POSLO[bx],ax
+	adc	es:DHNDL_POSHI[bx],dx
+	adc	es:DHNDL_POSXLO[bx],0
+	adc	es:DHNDL_POSXHI[bx],0
+	test	dx,8000h		; negative offset?
+	 jz	lseek2a
+	add	es:DHNDL_POSXLO[bx],0ffffh; yes, then extend the sign to 64-bit
+	adc	es:DHNDL_POSXHI[bx],0ffffh
+lseek2a:
+	jmps	lseek4a			; update new position
 
 lseek3:					; seek mode 2: relative to end
-	add	ax,es:DHNDL_SIZELO[bx]
-	adc	dx,es:DHNDL_SIZEHI[bx]	; add file size + offset
+;	add	ax,es:DHNDL_SIZELO[bx]
+;	adc	dx,es:DHNDL_SIZEHI[bx]	; add file size + offset
+	push	ax
+	mov	ax,es:DHNDL_SIZELO[bx]
+	mov	es:DHNDL_POSLO[bx],ax
+	mov	ax,es:DHNDL_SIZEHI[bx]
+	mov	es:DHNDL_POSHI[bx],ax
+	mov	ax,es:DHNDL_SIZEXLO[bx]
+	mov	es:DHNDL_POSXLO[bx],ax
+	mov	ax,es:DHNDL_SIZEXHI[bx]
+	mov	es:DHNDL_POSXHI[bx],ax
+	pop	ax
+	jmps	lseek2
 lseek4:					; seek mode 0: set absolute position
 	mov	es:DHNDL_POSLO[bx],ax
 	mov	es:DHNDL_POSHI[bx],dx
+	mov	fdos_pb+4,ax		; set return values
+	mov	fdos_pb+6,dx
+	mov	es:DHNDL_POSXLO[bx],cx
+	mov	es:DHNDL_POSXHI[bx],cx
+	ret
+lseek4a:
+	cmp	es:DHNDL_POSXLO[bx],0
+	 jne	lseek4b
+	cmp	es:DHNDL_POSXHI[bx],0
+	 je	lseek4d
+lseek4b:
+	cmp	es:DHNDL_POSXLO[bx],0ffffh
+	 jne	lseek4c
+	cmp	es:DHNDL_POSXHI[bx],0ffffh
+	 je	lseek4d
+lseek4c:
+	xor	ax,ax
+	dec	ax
+	mov	dx,ax
+	jmps	lseek4e
+lseek4d:
+	mov	ax,es:DHNDL_POSLO[bx]
+	mov	dx,es:DHNDL_POSHI[bx]
+lseek4e:
 	mov	fdos_pb+4,ax		; set return values
 	mov	fdos_pb+6,dx
 	ret
@@ -1705,6 +1763,19 @@ search_n35:
 	inc	si
 	inc	si			; skip starting cluster
 	movsw ! movsw			; return file size
+	mov	al,DSIZEX[bx]		; compute extended file size
+	mov	ah,al
+	and	al,111b
+	and	ah,11100000b
+	shr	ah,1
+	shr	ah,1
+	or	al,ah
+	 je	search_n40		; if below 4 GB then skip
+	sub	di,4			; else go back to file size field
+	xor	ax,ax			; AX=FFFFh
+	dec	ax
+	stosw ! stosw			; report 4 GB - 1
+search_n40:
 	jmp	unparse			; return file name
 
 eject
@@ -1760,6 +1831,17 @@ file_update:
 	xchg	ax,di			; DI -> directory entry in buffer
 	or	DATTS[di],DA_ARCHIVE	; mark file as modified
 ;;;	call	timestamp_dhndl		; record the current time
+	mov	ax,es:DHNDL_SIZEXLO[bx]	; get extended 6 bits for FAT+
+	mov	ah,al			; shift the bits in place
+	and	al,00000111b
+	and	ah,00111000b
+	shl	ah,1
+	shl	ah,1
+	or	ah,al
+	mov	al,DSIZEX[di]		; get original DSIZEX byte
+	and	al,00011000b		; save bits used WinNT
+	or	al,ah			; combine them with FAT+ bits
+	mov	DSIZEX[di],al		; and store them again
 	cmp	dosfat,FAT32		; is this a FAT32 file system?
 	 jne	file_update05		; no, then skip this entry
 	mov	ax,es:DHNDL_BLK1H[bx]	; get high word of 1st block in file

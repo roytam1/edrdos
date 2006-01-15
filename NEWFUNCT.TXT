@@ -32,6 +32,11 @@ New or changed system calls:
 	/ax=7305h	alternative Absolute Disk Read/Write Interface
 	/ax=3001h	Get Version Flag
 
+	/ax=7142h	Long LSEEK
+			This function works like 42h but uses a 64-bit (QWORD)
+			buffer pointed to by DS:DX for both the signed offset
+			and the resulting absolute file pointer position
+
  int 21h/ax=440dh	(Generic IOCTL) now supports category code 48h (FAT32)
 			stubs have been added for sub functions 4ah, 4bh, 6ah
 			and 6bh	(lock/unlock logical/physical drive) that fake

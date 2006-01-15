@@ -43,6 +43,18 @@
 - fixed bug that caused DR-DOS to hang on delete/rename operations when the
   boundary to the previous directory cluster was crossed while looking for
   preceding LFN entries
+(15.1.2006):
+- fixed bug that caused delete file operation to fail in every second cluster
+  in a directory chain
+- added preliminary support for 64-bit file systems
+- added support for the FAT+ filesystem extension that allows files of up to
+  256 GB
+- added new function int 21h/AX=7142h (Long LSEEK) to allow 64-bit file pointer
+  positioning
+- placed additional check in read/write routine to ensure that files cannot
+  become larger than the FAT+ limit (256 GB - 1)
+- changed function 4E/4Fh (Find First/Next) to report a maximum file size of
+  4 GB - 1
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

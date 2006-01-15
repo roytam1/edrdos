@@ -1720,6 +1720,19 @@ creat_handle20:
 creat_handle25:
 	lea	di,DHNDL_BLK1H[bx]
 	stosw
+	lea	di,DHNDL_SIZEX[bx]
+	mov	al,DSIZEX[si]
+	mov	ah,al
+	and	al,00000111b
+	and	ah,11100000b
+	shr	ah,1
+	shr	ah,1
+	or	al,ah
+	xor	ah,ah
+	stosw
+	xor	ax,ax
+	stosw
+	stosw ! stosw
 	lea	si,DTIME[si]
 	lea	di,DHNDL_TIME[bx]
 	movsw				; copy the time
@@ -1825,6 +1838,7 @@ vfy_hnd9:
 ;		CY set if device/network handle
 ;	Note:	doesn't return on error
 
+	Public	check_handle
 check_handle:
 ;------------
 	les	bx,current_dhndl
@@ -1849,6 +1863,7 @@ fdos_ED_H_MATCH:
 	jmp	fdos_error		; return an error
 
 	public	vfy_dhndl_ptr
+	public	vfy_dhndl_ptr_AX
 
 vfy_dhndl_ptr:
 ;=============
@@ -1862,6 +1877,7 @@ vfy_dhndl_ptr:
 
 	mov	si,2[bp]		; SI -> parameter block
 	mov	ax,2[si]		; get file handle from parameter block
+vfy_dhndl_ptr_AX:			; alternative entry point - AX=handle
 	test	ss:byte ptr remote_call+1,DHM_FCB/100h; if we are doing an FCB operation
 	 jnz	vfy_dhndl10		;  deal only with IFN, forget PSP
 	mov	es,ss:current_psp
@@ -2368,7 +2384,7 @@ BDOS_DATA	dseg	word
 join_name	db	'd:\filename.ext',0
 
 		db	'Patches to original OpenDOS source code '
-		db	'Copyright (c) 2002-2005 Udo Kuhnt'
+		db	'Copyright (c) 2002-2006 Udo Kuhnt'
 
 BDOS_CODE	cseg
 
