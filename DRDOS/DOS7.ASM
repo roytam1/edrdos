@@ -31,8 +31,7 @@ f73_10:
 	 jne	func73_error
 	jmp	func7305		; yes
 func73_error:
-	mov	ax,7300h		; function not supported
-	clc
+	xor	ax,ax			; function not supported
 	ret
 
 ;	*************************************

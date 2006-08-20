@@ -196,6 +196,7 @@ update_ddsc_free33:			; else really rebuild it
 	lea	di,DDSC_BBLOCK[bx]	; ES:DI -> DDSC_BBLOCK
 	stosw				; DDSC_BBLOCK = 0
 	stosw
+	lea	di,DDSC_BFREE[bx]	; ES:DI -> DDSC_BFREE
 	stosw				; DDSC_BFREE = 0
 	stosw
 update_ddsc_free35:

@@ -57,3 +57,15 @@ filesystem in size. To prevent non-FAT+-aware OSes from accidentally accessing
 FAT32+ drives which contain larger files, it is recommended to set the FAT32
 version number in the boot block of these drives to 0.1 (major version 0, minor
 version 1) to indicate that they should not mount these drives.
+
+Other things known not to work perfectly:
+- The DIR command currently does not show the actual size of files larger than
+  4 GB; this will probably be fixed in one of the next WIP versions.
+- Function Int 21h/AX=71A6 is supposed to give the "Unique File Identifier" of
+  an open file. Until someone can tell me how Windows determines this value, it
+  will be shown as 0 instead. Also, the number of "links to this file" is
+  always assumed to be 1.
+- Function Int 21h/AX=71A7,BL=01 treats all time stamps as local, simply
+  because there is no time zone information in DOS. This also affects the time
+  stamps given by function 71A6. The inverse function BL=00 has not been
+  implemented, yet.

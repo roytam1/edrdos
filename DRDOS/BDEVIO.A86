@@ -286,6 +286,7 @@ BDOS_CODE	cseg
 	public	div32
 	public	mul32
 	public	div64
+	public	mul64
 
 eject
 
@@ -1980,6 +1981,81 @@ div32_2:
 	mov	2[bp],dx
 	ret
 
+mul64:					; 64-bit multiplication
+;--------
+; On Entry:
+;	64-bit factors on stack
+;	space for 128-bit product reserved on stack
+;	SP-32
+; On Exit:
+;	64-bit product on stack
+;	SP-32
+;	Carry flag set if result does not fit in quad word
+; Modified registers:
+;	AX,BX,CX,DX
+	push	es			; save ES
+	push	bp			; save BP
+	push	si			; save SI
+	push	di			; save DI
+	push	ss
+	pop	es
+	mov	bp,sp			; base address of temporary variables
+	add	bp,10
+	mov	di,bp			; clear result
+	xor	ax,ax
+	mov	cx,4
+	cld
+	rep	stosw
+	xor	si,si			; start with lowest words of factors
+mul64_10:
+	xor	di,di
+mul64_20:
+	mov	bx,si			; compute offset in result
+	add	bx,di
+	add	bx,4
+	mov	cx,16			; number of carry additions left
+	sub	cx,bx
+	shr	cx,1			; / 2 = number of word additions
+	mov	ax,16[bp+si]		; multiply two words
+	mul	word ptr 24[bp+di]
+	xchg	bx,di
+	add	-4[bp+di],ax		; and add the product to the result
+	adc	-2[bp+di],dx
+	jcxz	mul64_40		; skip if highest words
+mul64_30:
+	jnc	mul64_40		; no carry, so no further adds needed
+	adc	word ptr [bp+di],0	; otherwise add zero
+	inc	di
+	inc	di
+	loop	mul64_30		; until no carry left over
+mul64_40:
+	xchg	bx,di
+	inc	di			; next word in first factor
+	inc	di
+	cmp	di,6			; already highest word?
+	 jbe	mul64_20		; next multiplication
+	inc	si			; next word in second factor
+	inc	si
+	cmp	si,6			; already highest word?
+	 jbe	mul64_10		; next multiplication
+	mov	cx,4			; check if results fits in 64 bits
+	xor	si,si
+mul64_45:
+	cmp	word ptr 8[bp+si],0	; zero?
+	 jnz	mul64_50		; if not, then skip and set carry
+	inc	si			; next word to compare
+	inc	si
+	loop	mul64_45		; until highest dword has been checked
+	jmps	mul64_60		; 64-bit result
+mul64_50:
+	stc
+mul64_60:
+	pop	di			; restore DI again
+	pop	si			; restore SI
+	pop	bp			; restore BP
+	pop	es			; restore ES
+	ret
+
 mul32:					; 32-bit multiplication
 ;--------
 ; On Entry:
@@ -1991,9 +2067,10 @@ mul32:					; 32-bit multiplication
 ;	SP-16
 ;	Carry flag set if result does not fit in double word
 ; Modified registers:
-;	AX,DX,BP,SP
+;	AX,DX
+	push	bp			; save BP
 	mov	bp,sp			; base address of temporary variables
-	add	bp,2
+	add	bp,4
 	mov	ax,10[bp]		; multiply high word of factors
 	mul	word ptr 14[bp]
 	mov	4[bp],ax		; store result
@@ -2021,6 +2098,7 @@ mul32:					; 32-bit multiplication
 mul32_1:
 	stc				; yes, set carry flag to indicate this
 mul32_2:
+	pop	bp			; restore BP again
 	ret
 
 	public	output_msg
