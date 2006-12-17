@@ -69,6 +69,22 @@
   letter to become inaccessible until reboot
 - added functions int 21h/AX=71A6 (Get File Info) and 21h/AX=71A7,BL=01
   (Convert DOS time to 64-bit Windows time)
+(17.12.2006):
+- changed disk buffer routines to no longer flush all buffers for a drive when
+  a FAT sector on that drive is read into a buffer
+- fixed a bug introduced by the 128 KB cluster support that caused all file
+  read/write operations to be split into single cluster transfers
+- added new debug routines that access the TSC of 686 CPUs to measure the
+  execution time
+- changed deblocked RW routine to not use preread for a buffer if the sector to
+  be written is known to be unused.
+- changed disk buffer routines to allow a buffer to just be tagged as in use
+  instead of actually filled if it still exists, changed file RW routine to tag
+  the corresponding FAT buffer when a cluster is accessed
+- changed cluster allocation routines to not flush the FAT buffers for a drive
+  automatically whenever a new cluster chain is allocated
+- changed 32bit division routine to not use a long division if the divisor is
+  a 16bit value
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

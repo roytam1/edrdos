@@ -70,6 +70,7 @@ fatrec		rw	2		; current FAT record
 fatbytl		rb	1		; low byte of split FAT entry
 fatbyth		rb	1		; high byte of split FAT entry
 split_fat	rb	1		; 0/FFh to indicate split entry
+tag_flg		rb	1		; do not read FAT sector, just tag it
 
 alloc_clus_cl	dw	0,0
 alloc_chain_cl	dw	0,0
@@ -495,7 +496,7 @@ alloc_chain15:
 	mov	es:word ptr DDSC_BFREE[bx],cx	; SSTOR says there's none, lets agree
 	mov	es:word ptr DDSC_BFREE+2[bx],cx
 alloc_chain16:
-	call	update_fat		; flush FAT to bring SSTOR up to date
+;	call	update_fat		; flush FAT to bring SSTOR up to date
 	jmps	alloc_chain10		; go round again and ask DELWATCH to
 					;  free up some more space
 					; we loop until either SSTOR says OK
@@ -897,9 +898,16 @@ fixfat80:
 ;	CX = entries left in sector (if FAT16 - performance optimisation)
 ;
 
+	Public	fatptr_tag
+fatptr_tag:
+	mov	tag_flg,1		; do not actually read FAT, just tag it
+	jmps	fatptr05
+
 	Public	fatptr
 fatptr:
 ;------
+	mov	tag_flg,0		; normal operation
+fatptr05:
 	push	dx			; save block number
 	push	ax
 ;	mov	bx,ax
@@ -946,7 +954,13 @@ fatptr10:
 	mov	fatrec,ax		; save FAT sector for FIXFAT
 	mov	fatrec+2,dx
 	xchg	ax,dx			; AX:DX = FAT sector
+	test	tag_flg,1		; tag mode requested?
+	 jz	fatptr15		; no, locate the sector normally
+	call	tag_fat			; else tag the buffer if it exists
+	jmps	fatptr16
+fatptr15:
 	call	locate_fat		; locate the sector
+fatptr16:
 	pop	cx			; CX = sector size - 1
 	pop	bx			; restore offset within FAT sector
 	pop	ax			; restore cluster #
@@ -978,7 +992,13 @@ fatptr30:				; block split across two sectors
 ;	inc	dx			; get 2nd sector
 	add	dx,1			; get 2nd sector
 	adc	ax,0
+	test	tag_flg,1		; tag mode requested?
+	 jz	fatptr35		; no, locate the sector normally
+	call	tag_fat			; else tag the buffer if it exists
+	jmps	fatptr36
+fatptr35:
 	call	locate_fat		; read the 2nd sector
+fatptr36:
 	sub	bx,bx
 	lea	bx,BCB_DATA[si+bx]	; ES:BX -> buffer data
 	mov	al,es:[bx]		; get 1st byte from next sector
@@ -997,6 +1017,10 @@ if DOS5
 ;	entry:	AX:DX = sector number to read
 ;	exit:	ES:SI = BCB
 
+tag_fat:
+	xor	cx,cx			; do not read the buffer, just tag it
+	jmps	locate_buffer
+
 locate_fat:
 ;----------
 ;	mov	ah,0			; set sector address overflow = 0
@@ -1008,7 +1032,7 @@ locate_buffer:
 ;	AX:DX = sector to locate
 ;	adrive = driver
 ;	CH = 0FFh if preread required
-;	CL = buffer type
+;	CL = buffer type, 0 means tag only
 ; On Exit:
 ;	ES:SI -> BCB_
 ;
@@ -1030,6 +1054,8 @@ locate20:				; MRU buffer doesn't match
 	cmp	si,word ptr bcb_root	; while there are more buffers
 	 jne	locate10
 
+	cmp	cl,0			; shall we only tag an existing buffer?
+	 je	locate50		; yes, then do not sacrifice this one
 	push	ax ! push cx ! push dx	; save all registers
 	mov	si,es:BCB_PREV[si]	; recycle least recently used buffer
 	call	flush_buffer		; write buffer to disk
@@ -1060,6 +1086,7 @@ locate40:
 	xchg	di,es:BCB_PREV[bx]	; back link to our buffer, DI = LRU buffer
 	mov	es:BCB_PREV[si],di	; link ourselves to LRU buffer
 	mov	es:BCB_NEXT[di],si	; forward link to our buffer
+locate50:
 	ret
 
 
@@ -1527,8 +1554,9 @@ fill_buffer:
 	test	es:BCB_FLAGS[si],BF_ISFAT
 					; are we reading a FAT sector?
 	 jz	fill_buf1		; skip if directory/data
-	mov	al,es:BCB_DRV[si]	; get the drive
-	call	flush_fat		; write out all dirty buffers
+;	mov	al,es:BCB_DRV[si]	; get the drive
+;	call	flush_fat		; write out all dirty buffers
+	call	flush_buffer		; write out buffer if dirty
 	mov	al,0000$0010b		; reading from FAT area
 	jmps	fill_buf3		; go ahead
 fill_buf1:
