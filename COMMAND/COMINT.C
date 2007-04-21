@@ -58,7 +58,6 @@
 #include	"toupper.h"
 #include	"support.h"		/* Support routines		 */
 #include	"global.h"
-#include	"dos7.h"
 #include	<limits.h>
 
 /*RG-00-*/
@@ -823,6 +822,9 @@ REG BYTE *cmd;
 	FREED	freespace;
 	BYTE	FAR *dpath="A:\\";
 	BYTE	sbase=0;
+	FINDD	finddata;
+	BOOLEAN	lfnsearch;
+	UWORD	shandle;
 
 	if(f_check (cmd, "dsawlprcn2", &flags, NO))	/* if any bad flags */
 	    return;					/*    don't do it   */
@@ -969,21 +971,58 @@ REG BYTE *cmd;
 
 	system = OPT(DIR_SYS) ? ATTR_SYS : 0;
 
-	ret = ms_x_first(path, ATTR_ALL, &search);
+	ret = ms_l_first(path, ATTR_ALL, &finddata);
 
-	if(!ret && (search.fattr & ATTR_DEV))	/* Check if the user has     */
+	if (!ret) {
+	  if (finddata.sname[0]==0) {
+	    strcpy(finddata.sname,finddata.lname);
+	    finddata.lname[0]=0;
+	  }
+	shandle=finddata.handle;
+	lfnsearch=1;
+	}
+	else {
+
+	  ret = ms_x_first(path, ATTR_ALL, &search);
+
+	  finddata.fattr=search.fattr;
+	  finddata.ftime=search.ftime;
+	  finddata.fdate=search.fdate;
+	  finddata.fsize=search.fsize;
+	  strcpy(finddata.sname,search.fname);
+	  finddata.lname[0]=0;
+	  lfnsearch=0;
+	}
+
+	if(!ret && (finddata.fattr & ATTR_DEV))	/* Check if the user has     */
 	    ret = ED_FILE;			/* specified a device then   */
 						/* generate an error.	     */
 	while(!ret) {
-	    if(!OPT(DIR_ALL) && (search.fattr & ATTR_SYS) != system) {
+	    if(!OPT(DIR_ALL) && (finddata.fattr & ATTR_SYS) != system) {
 						/* not the correct file type*/
 		others++;			/* remember others do exist */
-		ret = ms_x_next(&search);	/* get the next file and    */
+		if (lfnsearch) {
+		  ret = ms_l_next(shandle,&finddata);	/* get the next file and    */
+		  if (!ret)
+		    if (finddata.sname[0]==0) {
+		      strcpy(finddata.sname,finddata.lname);
+		      finddata.lname[0]=0;
+		    }
+		}
+		else {
+		  ret = ms_x_next(&search);	/* get the next file and    */
+		  finddata.fattr=search.fattr;
+		  finddata.ftime=search.ftime;
+		  finddata.fdate=search.fdate;
+		  finddata.fsize=search.fsize;
+		  strcpy(finddata.sname,search.fname);
+		  finddata.lname[0]=0;
+		}
 		continue;			/* continue the display     */
 	    }
 
-	    ext = strchr(search.fname, '.');	/* Get the file extension   */
-	    if(ext && ext != search.fname)	/* set the extension to NULL*/
+	    ext = strchr(finddata.sname, '.');	/* Get the file extension   */
+	    if(ext && ext != finddata.sname)	/* set the extension to NULL*/
 		*ext++ = '\0';			/* if no '.' exists or this */
 	    else				/* is the ".." or "." entry.*/
 		ext = "";
@@ -994,8 +1033,8 @@ REG BYTE *cmd;
 
 		printf ("%c:%c%-9s%-3s",
 			(nfiles % 5) ? ' ' : ddrive + 'A',
-			(search.fattr & ATTR_DIR) ? *pathchar : ' ',
-			search.fname, ext);
+			(finddata.fattr & ATTR_DIR) ? *pathchar : ' ',
+			finddata.sname, ext);
 	    }
 	    else {
 		if (OPT(DIR_2COLS)) {
@@ -1003,8 +1042,8 @@ REG BYTE *cmd;
 		}
 		else
 		    show_crlf(OPT(DIR_PAGE));
-		printf("%-9s%-3s", search.fname, ext);
-		if (search.fattr & ATTR_DIR)
+		printf("%-9s%-3s", finddata.sname, ext);
+		if (finddata.fattr & ATTR_DIR)
 /*		    printf(" <DIR>   ");*/
 		  if (OPT(DIR_2COLS))
 		    printf(" <DIR>    ");
@@ -1013,13 +1052,14 @@ REG BYTE *cmd;
 		else
 		  if (OPT(DIR_2COLS))
 /*		    printf ("%9lu", search.fsize);*/
-		    printf ("%10lu", search.fsize);
+		    printf ("%10lu", finddata.fsize);
 		  else
-		    printf ("%14s", thousands(search.fsize));
+		    printf ("%14s", thousands(finddata.fsize));
 
-		if(search.fdate) {	   /* if timestamp exists */
-		    printf (" "); disp_filedate (search.fdate);
-		    printf (" "); disp_filetime (search.ftime);
+		if(finddata.fdate) {	   /* if timestamp exists */
+		    printf (" "); disp_filedate (finddata.fdate);
+		    printf (" "); disp_filetime (finddata.ftime);
+		    if (!OPT(DIR_2COLS)) printf (" %s",finddata.lname);
 		    if ((OPT(DIR_2COLS)) && (nfiles%2 == 0)) printf ("   ");
 		}
 		else {
@@ -1027,15 +1067,33 @@ REG BYTE *cmd;
 		}
 	    }
 	    nfiles ++;
-	    ret = ms_x_next(&search);
+	    if (lfnsearch) {
+	      ret = ms_l_next(shandle,&finddata);	/* get the next file and    */
+	      if (!ret)
+	        if (finddata.sname[0]==0) {
+	          strcpy(finddata.sname,finddata.lname);
+	          finddata.lname[0]=0;
+	        }
+	    }
+	    else {
+	      ret = ms_x_next(&search);
+	      finddata.fattr=search.fattr;
+	      finddata.ftime=search.ftime;
+	      finddata.fdate=search.fdate;
+	      finddata.fsize=search.fsize;
+	      strcpy(finddata.sname,search.fname);
+	      finddata.lname[0]=0;
+	    }
 	}
+
+	if (lfnsearch) ms_l_findclose(shandle);
 
 	if(others + nfiles == 0) {	/* If no matching files then exit  */
 	    e_check(ED_FILE);		/* after displaying File Not Found */
 	}
 
 	dpath[0]=ddrive+'A';
-	freespace.size=sizeof(freespace);
+/*	freespace.size=sizeof(freespace);*/
 	freespace.ver=0;
 	ret=ms_edrv_space(&dpath,(BYTE *)&freespace,sizeof(freespace));
 	if (ret==0) {
@@ -1077,7 +1135,6 @@ REG BYTE *cmd;
 	if(others)			/* if others do exist, tell them */
 	    printf (MSG_EXIST, system ? MSG_NSYS : MSG_NDIR);
 }
-
 
 GLOBAL VOID CDECL cmd_echo(s, o)
 REG BYTE	*s;		/* Deblanked Command Line	*/

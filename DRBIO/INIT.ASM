@@ -342,8 +342,30 @@ Int19Trap10:
 	movsw
 	movsw				; restore this vector
 	loop	Int19Trap10		; go and do another
+	cmp	oldxbda,0		; has the XBDA been moved?
+	 je	Int19Trap20		; no
+	mov	es,oldxbda		; yes, move it back
+	mov	cx,xbdalen
+	mov	ds,newxbda
+	xor	si,si
+	xor	di,di
+	rep	movsw
+	mov	ax,40h			; update BIOS data
+	mov	ds,ax
+	xor	di,di
+	mov	ax,es
+	mov	0eh[di],ax
+	mov	ax,oldmemtop		; also restore old conventional
+					; memory top
+	mov	13h[di],ax
+Int19Trap20:
 	int	19h			; and go to original int 19...
 
+	Public	oldxbda,newxbda,xbdalen,oldmemtop
+oldxbda		dw	0		; old XBDA segment address
+newxbda		dw	0		; new XBDA segment address
+xbdalen		dw	0		; length of XBDA in words
+oldmemtop	dw	0		; old conventional mem limit
 
 	orgabs	16ch			; PRN:/AUX: the device number
 

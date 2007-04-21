@@ -34,6 +34,8 @@
 ;    ENDLOG
 */
 
+#include	"dos7.h"
+
 EXTERN	VOID	CDECL	debug(VOID);
 
 #define	EXT_SUBST 1
@@ -106,6 +108,10 @@ EXTERN VOID CDECL     ms_getdate(SYSDATE *);
 EXTERN VOID FAR * CDECL ms_idle_ptr(VOID);
 EXTERN WORD CDECL     ms_switchar(VOID);
 EXTERN WORD CDECL     ms_x_expand(BYTE *, BYTE *);
+EXTERN WORD CDECL     ms_l_first(BYTE *, UWORD, FINDD *);
+EXTERN WORD CDECL     ms_l_next(UWORD, FINDD *);
+EXTERN WORD CDECL     ms_l_findclose(UWORD);
+EXTERN WORD CDECL     ms_l_unlink(BYTE *);
 
 EXTERN VOID CDECL     mem_alloc(BYTE FAR * NEAR *, UWORD *, UWORD, UWORD);
 EXTERN VOID CDECL     mem_free (BYTE FAR * NEAR *);

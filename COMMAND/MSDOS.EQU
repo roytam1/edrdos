@@ -123,6 +123,10 @@ MS_X_SETHC	equ	67h
 MS_X_COMMIT	equ	68h
 
 MS_EDRV_SPACE	equ	7303h
+MS_L_UNLINK	equ	7141H
+MS_L_FIRST	equ	714eh
+MS_L_NEXT	equ	714fh
+MS_L_FINDCLOSE	equ	71a1h
 
 DOS_INT     equ 21h ; DOS Entry Point
 ;

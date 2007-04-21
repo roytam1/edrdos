@@ -365,9 +365,9 @@ _ms_edrv_space:
 	mov	bp,sp
 	push	ds
 	push	es
-	push	dx
-	push	di
-	push	bx
+;	push	dx
+;	push	di
+;	push	bx
 	mov	di,6[bp]		; ES:DI pointer to buffer
 	push	ds
 	pop	es
@@ -388,9 +388,9 @@ _ms_edrv_space:
 _ms_edrv_space10:
 	xor	ax,ax
 _ms_edrv_space20:
-	pop	bx
-	pop	di
-	pop	dx
+;	pop	bx
+;	pop	di
+;	pop	dx
 	pop	es
 	pop	ds
 	pop	bp
@@ -548,6 +548,30 @@ _ms_x_unlink:
 	mov	ah,MS_X_UNLINK
 	jmp	ms_dx_call
 
+	Public	_ms_l_unlink
+;-----------
+_ms_l_unlink:
+;-----------
+	push	bp
+	mov	bp,sp
+	mov	ax,MS_L_UNLINK
+	mov	dx,4[bp]		; DS:DX -> filename
+	xor	cx,cx			; no required attributes
+	xor	si,si			; no wildcards or search attributes
+	int	DOS_INT
+	jnc	ms_l_unlink10
+	neg	ax
+	jmp	ms_l_unlink30
+ms_l_unlink10:
+	cmp	ax,7100h		; function implemented?
+	jne	ms_l_unlink20
+	mov	ax,0ff01h		; generic error
+	jmp	ms_l_unlink30
+ms_l_unlink20:
+	sub	ax,ax			; no error
+ms_l_unlink30:
+	pop	bp
+	ret
 
 	Public	_ms_x_lseek
 ;----------
@@ -819,6 +843,78 @@ _ms_x_next:
 	int	DOS_INT
 	mov	ah,MS_X_NEXT		; get the function
 	jmp	ms_call_dos		; get DX, call DOS, handle errors
+
+	Public	_ms_l_first
+;----------
+_ms_l_first:
+;----------
+	push	bp
+	mov	bp,sp
+	push	es
+	push	ds
+	pop	es
+	mov	dx,4[bp]		; get ASCII string
+	mov	cx,6[bp]		; get attribute
+	mov	si,1			; request DOS date/time format
+	mov	di,8[bp]		; get buffer address
+	mov	ax,MS_L_FIRST		; LFN FindFirst
+	int	DOS_INT
+	 jnc	ms_l_first10		; error?
+	neg	ax
+	jmp	ms_l_first30
+ms_l_first10:
+	cmp	ax,7100h		; function not implemented?
+	 jne	ms_l_first20
+	mov	ax,0ff01h		; generic error code
+;	stc
+	jmp	ms_l_first30
+ms_l_first20:
+	mov	es:24h[di],ax		; save search handle
+	sub	ax,ax
+ms_l_first30:
+	pop	es
+	pop	bp
+	ret
+
+	Public	_ms_l_next
+;----------
+_ms_l_next:
+;----------
+	push	bp
+	mov	bp,sp
+	push	es
+	push	ds
+	pop	es
+	mov	bx,4[bp]		; get search handle
+	mov	si,1			; request DOS date/time format
+	mov	di,6[bp]		; get buffer address
+	mov	ax,MS_L_NEXT		; LFN FindNext
+	int	DOS_INT
+	 jnc	ms_l_next10		; error?
+	neg	ax
+	jmp	ms_l_next30
+ms_l_next10:
+	cmp	ax,7100h		; function not implemented?
+	 jne	ms_l_next20
+	mov	ax,0ff01h		; generic error code
+;	stc
+	jmp	ms_l_next30
+ms_l_next20:
+	sub	ax,ax
+ms_l_next30:
+	pop	es
+	pop	bp
+	ret
+
+	Public	_ms_l_findclose
+;----------
+_ms_l_findclose:
+;----------
+	push	bp
+	mov	bp,sp
+	mov	bx,4[bp]		; get search handle
+	mov	ax,MS_L_FINDCLOSE	; LFN FindClose
+	jmp	ms_call_dos
 
 ms_dx_call:				; call DOS with parameter in DX
 	push	bp

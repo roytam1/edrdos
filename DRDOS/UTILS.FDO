@@ -1720,7 +1720,7 @@ creat_handle20:
 creat_handle25:
 	lea	di,DHNDL_BLK1H[bx]
 	stosw
-	lea	di,DHNDL_SIZEX[bx]
+	lea	di,DHNDL_SIZEX[bx]	; FAT+ extended file size bits
 	mov	al,DSIZEX[si]
 	mov	ah,al
 	and	al,00000111b
@@ -1731,8 +1731,8 @@ creat_handle25:
 	xor	ah,ah
 	stosw
 	xor	ax,ax
-	stosw
-	stosw ! stosw
+	stosw				; zero higher file size bits
+	stosw ! stosw			; also the high dword of the position
 	lea	si,DTIME[si]
 	lea	di,DHNDL_TIME[bx]
 	movsw				; copy the time
@@ -2384,7 +2384,7 @@ BDOS_DATA	dseg	word
 join_name	db	'd:\filename.ext',0
 
 		db	'Patches to original OpenDOS source code '
-		db	'Copyright (c) 2002-2006 Udo Kuhnt'
+		db	'Copyright (c) 2002-2007 Udo Kuhnt'
 
 BDOS_CODE	cseg
 

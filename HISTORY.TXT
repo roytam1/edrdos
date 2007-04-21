@@ -85,6 +85,14 @@
   automatically whenever a new cluster chain is allocated
 - changed 32bit division routine to not use a long division if the divisor is
   a 16bit value
+(21.4.2007):
+- added LFN support to COMMAND.COM for DIR command
+- added some preliminary code for LFN support in DEL command
+- fixed a bug in DR-DOS header which had been introduced by the 64-bit file
+  support that caused the file handle #3 to collide with the line input buffer,
+  resulting in unpredictable behaviour if the handle was in use
+- fixed bug in Int 19h routine and made it restore the XBDA segment to the
+  previous address if it had been relocated with the XBDA command
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

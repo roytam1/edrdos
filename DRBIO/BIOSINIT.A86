@@ -106,6 +106,11 @@ F8KEY		equ	4200h
 
 SWITCH_F	equ	01h
 SWITCH_N	equ	02h
+
+	extrn	oldxbda:word
+	extrn	newxbda:word
+	extrn	xbdalen:word
+	extrn	oldmemtop:word
 	
 INITCODE	CSEG	PARA 'INITCODE'
 	extrn	cleanup:near			; BIOS Clean Up routine
@@ -125,7 +130,7 @@ INITCODE	CSEG	PARA 'INITCODE'
 		db	'XXXX-0000-987654321X '
 
 		db	'Patches to original OpenDOS source code '
-		db	'Copyright (c) 2002-2006 Udo Kuhnt'
+		db	'Copyright (c) 2002-2007 Udo Kuhnt'
 
 
 	Public	biosinit
@@ -1051,16 +1056,23 @@ reloc_xbda20:
 	xchg	ax,dx
 	xor	ah,ah
 	mov	al,es:[bx]		; length of XBDA in kilobytes
-	mov	cl,10			; make this bytes instead
+	mov	cl,9			; make this words instead
 	shl	ax,cl
 	xchg	ax,cx
 	push	ds
-	push	es			; copy it to new position
+	mov	ax,es			; save old XBDA segment address,
+	push	es
+	mov	es,BIOS_SEG		; segment address of low memory code
+	mov	es:oldxbda,ax		; save old XBDA segment address,
+	mov	es:newxbda,dx		; new address
+	mov	es:xbdalen,cx		; and length for Int 19h
+	pop	es
+	push	es			; copy XBDA to new position
 	pop	ds
 	mov	es,dx
 	xor	di,di
 	xor	si,si
-	rep	movsb
+	rep	movsw
 	mov	ax,40h			; and update the BIOS data area with the new address
 	mov	ds,ax
 	mov	ds:0eh[bx],es
@@ -1124,7 +1136,10 @@ reloc_xbda45:
 	mov	ax,40h			; also update the new base mem size
 	mov	es,ax			; in the BIOS data area
 	mov	bx,13h
-	mov	es:[bx],640
+	mov	ax,640
+	xchg	es:[bx],ax
+	mov	es,BIOS_SEG
+	mov	es:oldmemtop,ax		; save old conventional memory top
 reloc_xbda130:
 	pop	es			; restore ES again
 reloc_xbda140:
@@ -1978,7 +1993,6 @@ Verify386:
 Verify386fail:
 	stc				; it's not a 386
 	ret
-
 
 INITDATA	dseg	'INITDATA'
 

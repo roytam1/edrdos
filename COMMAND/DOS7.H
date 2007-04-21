@@ -19,3 +19,20 @@ typedef struct {
 	ULONG	npclus;		// number of physical allocation units
 /*reserved	equ	24h	; reserved bytes*/
 } FREED;
+
+typedef struct {
+	ULONG	fattr;		// file attributes
+	ULONG	ctime;
+	ULONG	ctimeh;
+	ULONG	atime;
+	ULONG	atimeh;
+	UWORD	ftime;		// file time
+	UWORD	fdate;		// file date
+	ULONG	ftimeh;
+	ULONG	fsizeh;		// file size high DWORD
+	ULONG	fsize;		// file size low DWORD
+	UWORD	handle;		// search handle
+	BYTE	resvd[6];
+	BYTE	lname[260];	// long file name
+	BYTE	sname[14];	// short file name
+} FINDD;
