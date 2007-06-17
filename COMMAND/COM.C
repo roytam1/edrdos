@@ -276,7 +276,8 @@ WORD	psp_xsum;
 VOID FAR CDECL _main(cmd)
 BYTE	*cmd;
 {
-	BYTE    cmd_buf[128];
+/*	BYTE    cmd_buf[128];*/
+	BYTE    cmd_buf[MAX_LINE];
 
 #if defined(CDOSTMP)				/* Insure the NETWORK_INIT   */
 	network_init();				/* function is called before */
@@ -448,6 +449,8 @@ BYTE *cmd;
 	BYTE	lferror = 0;
 	strcpy(kbdptr, "");			/* start with no commands */
 
+	if (!(get_cmdname(heap())))
+	    set_reload_file();
 #if 0
 #if defined(DLS)
 	dls_msg_ver(MSG_VER);			/* check message file version*/
@@ -549,6 +552,7 @@ BYTE *cmd;
 	 */
 
 	s = (BYTE *) heap_get(128); /* allocate some heap memory */
+
 
 	FOREVER {
 	    cmd = deblank(cmd);			/* Deblank the command line  */

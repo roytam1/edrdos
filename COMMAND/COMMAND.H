@@ -53,6 +53,7 @@
 #define MAX_FILELEN	140	/* Maximum length of full file specification */
 				/* ie "x:\....\nnnnnnnn.eee;password"	     */
 #define	MAX_ENVLEN	255	/* Maximum length of environment entry       */
+#define	MAX_LINE	255	/* Maximum length of command line            */
 
 #define DEFAULT_PROMPT	"$n$g"		/* Default Prompt string */
 

@@ -6,11 +6,11 @@ In Config.sys:
 		high memory if available
  HISTACKS	moves interrupt stacks to upper or high memory
  HILASTDRIVE	moves drive table to upper or high memory
- DDSCS=UMB/HIGH/HIGH,UMB
+ DDSCS=UMB|HIGH|HIGH,UMB
 		moves drive scriptor tables (DDSCS) to upper or high memory;
 		default is DDSC=LOW
  DOSDATA=UMB	moves main DOS data segment to upper memory; default is LOW
- XBDA=LOW/UMB/LOW,UMB
+ XBDA=LOW|UMB|LOW,UMB
 		relocates extended BIOS data area (XBDA) to low base or upper
 		memory if the memory manager has not already done this
  VERSION=x.xx[,y.yy]
@@ -35,7 +35,8 @@ New or changed system calls:
 	/AX=7142h	Long LSEEK
 			This function works like 42h but uses a 64-bit (QWORD)
 			buffer pointed to by DS:DX for both the signed offset
-			and the resulting absolute file pointer position
+			and the resulting absolute file pointer position; the
+			type of movement is read from CL
 	/AX=71A6h	Get File Info
 	/AX=71A7h,BL=01	Convert DOS Time to Windows 64-Bit Time
 
@@ -51,3 +52,5 @@ New or changed system calls:
 	/AH=36h		(Get Free Disk Space) no longer reports cluster sizes
 			>32K on FAT32 partitions
 	/AH=49h		(Free Memory) merges adjacent free blocks after freeing
+	/AH=53h		(Translate BPB to DDSC) now uses FAT32 BPBs and DDSCs
+			if CX=4558h and DX=4152h

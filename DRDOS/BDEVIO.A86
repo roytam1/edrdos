@@ -1478,10 +1478,14 @@ select_logical_drv05:
 	mov	word ptr current_ldt,bx
 	mov	word ptr current_ldt+WORD,es
 	mov	al,es:byte ptr LDT_FLAGS+1[bx]	; is the drive valid ?
-	test	al,(LFLG_NETWRKD+LFLG_JOINED)/100h
-	 jnz	select_drv_bad		; reject networked/joined drives
+;	test	al,(LFLG_NETWRKD+LFLG_JOINED)/100h
+;	 jnz	select_drv_bad		; reject networked/joined drives
+	test	al,LFLG_JOINED/100h
+	 jnz	select_drv_bad		; reject joined drives
 	test	al,LFLG_PHYSICAL/100h
 	 jz	select_drv_bad		; reject non-physical drives
+	test	al,LFLG_NETWRKD/100h	; skip if networked drive
+	 jnz	select_logical_drv30
 	mov	al,es:LDT_NAME[bx]	; get the drive from the ascii name
 	and	al,1fh			;  as the drive may require rebuilding
 	dec	ax			; make it zero based

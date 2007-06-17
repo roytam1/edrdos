@@ -93,6 +93,18 @@
   resulting in unpredictable behaviour if the handle was in use
 - fixed bug in Int 19h routine and made it restore the XBDA segment to the
   previous address if it had been relocated with the XBDA command
+(17.6.2007):
+- fixed FAT size for FAT32 in BIOS Parameter Block reported by IOCTL
+- made function Int 21h/AH=71h (LFN and 64-bit file support) set the carry flag
+  and AX=7100h if subfunction is unsupported
+- added FAT32 extension to function Int 21h/AH=53h (Translate BIOS Parameter
+  Block to Drive Parameter Block)
+- changed function Int 21h/AH=60h (Canonicalize Filename or Path) to also work
+  on CD-ROM drives, needed by TRUENAME command and also DOSLFN
+- increased maximum length of command line in COMMAND.COM to 255, removed 122
+  character limit when displaying the PATH variable
+- made COMMAND.COM identify its own filename and path after loading to allow it
+  to properly reload its transient part if it has been renamed
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

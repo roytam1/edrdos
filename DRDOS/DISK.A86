@@ -833,6 +833,8 @@ func53:
 	mov	FD_BPBOFF,si		; Segment and Offset of BPB
 	mov	FD_BPBSEG,es
 	mov	FD_DDSCOFF,bp		; Segment and Offset of DDSC
+	mov	FD_SIG1,cx		; signatures for extended function
+	mov	FD_SIG2,dx
 	call	reload_ES
 	mov	FD_DDSCSEG,es
 	jmp	fdos_nocrit

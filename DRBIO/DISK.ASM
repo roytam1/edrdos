@@ -3080,7 +3080,8 @@ hd_bpb40:				; cluster size determined
 	sub	ax,1			; subtract reserved
 	sbb	dx,0
 	xor	cx,cx
-	mov	ch,BPB_ALLOCSIZ[bx]	; CX = (256 * # of clusters on drive)
+	mov	ch,BPB_ALLOCSIZ[bx]
+	shr	cx,1			; CX = (128 * # of clusters on drive)
 	dec	cx
 	add	ax,cx			; add in for rounding error
 	adc	dx,0

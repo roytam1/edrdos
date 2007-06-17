@@ -49,7 +49,7 @@ with older software:
   config.sys. If that is the case, use INSTALLLAST/HIINSTALLLAST instead.
 
 Starting with version 7.01.08 WIP (15.1.2006), Enhanced DR-DOS supports the
-FAT+ filesystem extension which allows files to become as large as 256 GB - 1,
+FAT+ filesystem extension which allows files to become as large as 256 GB - 1B,
 space on the drive permitting. This support is automatic and does not require
 any changes to existing drives. FAT+ is fully downward compatible with FAT for
 drives which only contain files that are below the 4 GB limit of the older FAT

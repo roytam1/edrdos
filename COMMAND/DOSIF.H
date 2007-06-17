@@ -149,6 +149,8 @@ EXTERN BOOLEAN CDECL  env_scan(BYTE *, BYTE *); 	/* CSUP.ASM	*/
 EXTERN BOOLEAN CDECL  env_del(BYTE *);			/* CSUP.ASM	*/
 EXTERN BOOLEAN CDECL  env_ins(BYTE *);			/* CSUP.ASM	*/
 
+EXTERN BOOLEAN CDECL  get_cmdname(BYTE *);		/* CSUP.ASM	*/
+
 #if defined(CDOSTMP)
 #define	system	bdos	/* Call the BDOS Function for Common routines	*/
 #else

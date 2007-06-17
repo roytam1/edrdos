@@ -17,7 +17,7 @@ _msg_ver111	db	NUL , NUL
 	public	_msg_version
 	public	msg_version
 msg_version	label	byte
-_msg_version	db	LF, "Enhanced DR-DOS 7.01.08 WIP (21.4.2007) ", "based on Caldera OpenDOS 7.01", LF, NUL
+_msg_version	db	LF, "Enhanced DR-DOS 7.01.08 WIP (17.6.2007) ", "based on Caldera OpenDOS 7.01", LF, NUL
 	public	_msg_lbl
 	public	msg_lbl
 msg_lbl	label	byte
@@ -145,7 +145,7 @@ _msg_path	db	"No Path", LF, NUL
 	public	_path_template
 	public	path_template
 path_template	label	byte
-_path_template	db	"%.122s", LF, NUL
+_path_template	db	"%s", LF, NUL
 	public	_msg_ren
 	public	msg_ren
 msg_ren	label	byte

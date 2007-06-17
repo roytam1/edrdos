@@ -343,6 +343,30 @@ get_k20:
 	ret
 get_key	ENDP
 
+	Public	_get_cmdname
+_get_cmdname:
+	cld
+	push	bp
+	mov	bp,sp
+	push	ds
+	push	si
+	push	es
+	push	di
+	mov	es,__psp2
+	mov	es,es:16h
+	push	ds
+	push	es
+	pop	ds
+	pop	es
+	mov	si,62h
+	mov	di,4[bp]
+get_cmdname10:
+	lodsb
+	stosb
+	or	al,al
+	 jnz	get_cmdname10
+	jmp	env_exit
+	
 	page
 	assume	cs:CGROUP, ds:DGROUP, es:nothing
 ifdef MSC

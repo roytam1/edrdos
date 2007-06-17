@@ -1095,7 +1095,7 @@ CODE	ends
 RCODE_ALIGN	segment public para 'RCODE'
 ifndef ROMSYS
 ;	db	1100h dup(0)		; reserve space for command.com
-	db	1500h dup(0)		; reserve space for command.com
+	db	1580h dup(0)		; reserve space for command.com
 endif
 RCODE_ALIGN	ends
 

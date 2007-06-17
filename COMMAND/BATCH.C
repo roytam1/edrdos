@@ -178,7 +178,7 @@ BOOLEAN ifcond=FALSE;
 
 EXTERN jmp_buf break_env;
 
-#define	MAX_LINE	128	/* Maximum No of Chars in input line	*/
+/*#define	MAX_LINE	128*/	/* Maximum No of Chars in input line	*/
 
 #if defined(CPM)
 EXTERN UWORD user;		/* USER Number variable for CPM.EXE	*/

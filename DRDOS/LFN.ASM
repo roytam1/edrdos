@@ -75,7 +75,12 @@ func71_a7:
 	 jne	func71_error
 	jmp	func71a7		; yes
 func71_error:
-	xor	ax,ax			; function not supported
+	mov	ax,7100h		; function not supported
+	push	ds
+	lds	bp,int21regs_ptr	; set carry flag
+	or	ds:reg_FLAGS[bp],CARRY_FLAG
+	pop	ds
+	stc
 	ret
 
 func7142:
@@ -101,7 +106,7 @@ f7142_05:
 	mov	ax,1			; error: invalid function number
 	pop	ds
 	push	ds
-	lds	bp,int21regs_ptr
+	lds	bp,int21regs_ptr	; set carry flag
 	or	ds:reg_FLAGS[bp],CARRY_FLAG
 	pop	ds
 	stc
