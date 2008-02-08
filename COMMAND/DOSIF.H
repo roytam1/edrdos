@@ -108,10 +108,21 @@ EXTERN VOID CDECL     ms_getdate(SYSDATE *);
 EXTERN VOID FAR * CDECL ms_idle_ptr(VOID);
 EXTERN WORD CDECL     ms_switchar(VOID);
 EXTERN WORD CDECL     ms_x_expand(BYTE *, BYTE *);
+
+EXTERN WORD CDECL     ms_edrv_space(BYTE *,BYTE *,UWORD);
 EXTERN WORD CDECL     ms_l_first(BYTE *, UWORD, FINDD *);
 EXTERN WORD CDECL     ms_l_next(UWORD, FINDD *);
 EXTERN WORD CDECL     ms_l_findclose(UWORD);
-EXTERN WORD CDECL     ms_l_unlink(BYTE *);
+EXTERN WORD CDECL     ms_l_unlink(BYTE *,UWORD);
+EXTERN WORD CDECL     ms_l_rename(BYTE *, BYTE *);
+EXTERN WORD CDECL     ms_l_expand(BYTE *, BYTE *);
+EXTERN WORD CDECL     ms_l_chdir(BYTE *);
+EXTERN WORD CDECL     ms_l_chmod(BYTE *, UWORD, UWORD);
+EXTERN WORD CDECL     ms_l_curdir(UWORD, BYTE *);
+EXTERN WORD CDECL     ms_l_rmdir(BYTE *);
+EXTERN WORD CDECL     ms_l_mkdir(BYTE *);
+EXTERN WORD CDECL     ms_l_creat(BYTE *, UWORD);
+EXTERN WORD CDECL     ms_l_open(BYTE *, UWORD);
 
 EXTERN VOID CDECL     mem_alloc(BYTE FAR * NEAR *, UWORD *, UWORD, UWORD);
 EXTERN VOID CDECL     mem_free (BYTE FAR * NEAR *);
@@ -187,5 +198,3 @@ EXTERN	BOOLEAN CDECL	extended_error(VOID);
 EXTERN	WORD	CDECL	get_lines_page(VOID);
 EXTERN	WORD	CDECL	get_scr_width(VOID);
 EXTERN	WORD	CDECL	novell_copy(WORD,WORD,ULONG);
-
-EXTERN WORD CDECL     ms_edrv_space(BYTE FAR * NEAR *,BYTE *,UWORD);

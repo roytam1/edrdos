@@ -813,7 +813,8 @@ REG BYTE  *s;
 GLOBAL VOID repwild(src,dest)
 REG BYTE  *src,*dest;
 {
-        BYTE    t[13];
+/*        BYTE    t[13];*/
+        BYTE    t[MAX_LFNLEN];
 	BYTE	*temp;
 	
 	temp=&t[0];				/* ptr to temp array */
@@ -1179,6 +1180,7 @@ BOOLEAN  append_stardotstar;
 	REG BYTE *cp;
 	DTA	search;
 	WORD	ret;
+	FINDD	finddata;
 
 	if ((cp = d_check (path)) == NULLPTR)	/* if bad drive letter */
 	    return FAILURE;			/*    don't do it */
@@ -1188,7 +1190,14 @@ BOOLEAN  append_stardotstar;
 	}
 	else if(!iswild (cp))			/* else is it path or file? */
 	{					/* wild cards imply files */
-	    ret = ms_x_first(path, ATTR_ALL, &search);	/* get attributes */
+	    ret = ms_l_first(path, ATTR_ALL, &finddata); /* get attributes */
+
+	    if (ret==ED_FUNCTION) {
+	      ret=ms_x_first(path,ATTR_ALL,&search);
+	      finddata.fattr=search.fattr;
+	    }
+	    else
+	      ms_l_findclose(finddata.handle);
 
 	    if(ret == ED_ROOM)
 	        ret = ED_FILE;
@@ -1210,7 +1219,7 @@ BOOLEAN  append_stardotstar;
 		    return FAILURE;		/* no files found	     */
 		}
 
-	    if (search.fattr & ATTR_DIR) {	/* if path names directory   */
+	    if (finddata.fattr & ATTR_DIR) {	/* if path names directory   */
 		append_slash(path); 		/* make it all files in it   */
 		strcat(path, d_slash_stardotstar+3);
 	    }
@@ -1219,7 +1228,12 @@ BOOLEAN  append_stardotstar;
 		return SUCCESS; 		/* exist. If no return	     */
 	}
 
-	ret = ms_x_first(path, attrib, &search);  /* Search for the file     */
+	ret = ms_l_first(path, attrib, &finddata);  /* Search for the file     */
+
+	if (ret==ED_FUNCTION)
+	  ret=ms_x_first(path,attrib,&search);
+	else
+	  ms_l_findclose(finddata.handle);
 
 	if(ret < 0)				/* Check the error returned  */
 	    if(!exist && (ret==ED_FILE || ret==ED_ROOM)) /* If file does not exist but*/

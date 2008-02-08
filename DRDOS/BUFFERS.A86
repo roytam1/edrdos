@@ -177,6 +177,11 @@ update_ddsc_free30:
 ; rebuild our free space count
 	cmp	dosfat,FAT32		; FAT32 drive?
 	 jne	update_ddsc_free33	; no, then skip
+	cmp	es:word ptr DDSC_BFREE+2[bx],0	; out of free space?
+	 jne	update_ddsc_free31	; no, just unknown
+	cmp	es:word ptr DDSC_BFREE[bx],0
+	 je	update_ddsc_free33	; yes, then recount
+update_ddsc_free31:			; else try FS info sector value
 	cmp	es:DDSC_FSINFO[bx],0ffffh;FS info sector present?
 	 je	update_ddsc_free33	; no, then do not try to read from it
 	call	read_fsinfo05		; read the info block first, if one exists

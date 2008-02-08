@@ -363,36 +363,17 @@ _ms_edrv_space:
 
 	push	bp
 	mov	bp,sp
-	push	ds
 	push	es
-;	push	dx
-;	push	di
-;	push	bx
-	mov	di,6[bp]		; ES:DI pointer to buffer
-	push	ds
+	push	di
+	mov	dx,4[bp]		; DS:DX pointer to drive path
+	push	ds			; ES:DI pointer to buffer
 	pop	es
-	mov	bx,8[bp]		; CX length of buffer
-	mov	cx,[bx]
-	mov	bx,4[bp]		; DS:DX pointer to drive path
-	mov	dx,[bx]
-	mov	ax,2[bx]
-	mov	ds,ax
+	mov	di,6[bp]
+	mov	cx,8[bp]		; CX length of buffer
 	mov	ax,MS_EDRV_SPACE
-	int	DOS_INT
-	 jc	_ms_edrv_space20	; error?
-	cmp	ax,7300h		; function not implemented?
-	 jne	_ms_edrv_space10
-	mov	al,0ffh			; generic error code
-	stc
-	jmp	_ms_edrv_space20
-_ms_edrv_space10:
-	xor	ax,ax
-_ms_edrv_space20:
-;	pop	bx
-;	pop	di
-;	pop	dx
+	call	call73
+	pop	di
 	pop	es
-	pop	ds
 	pop	bp
 	ret
 
@@ -417,6 +398,17 @@ _ms_x_mkdir:
 	mov	ah,MS_X_MKDIR
 	jmp	ms_dx_call
 
+	Public _ms_l_mkdir
+;----------
+_ms_l_mkdir:
+;----------
+	push	bp
+	mov	bp,sp
+	mov	dx,4[bp]		; DS:DX directory name
+	mov	ax,MS_L_MKDIR
+	call	call71
+	pop	bp
+	ret
 
 	Public	_ms_x_rmdir
 ;----------
@@ -425,6 +417,17 @@ _ms_x_rmdir:
 	mov	ah,MS_X_RMDIR
 	jmp	ms_dx_call
 
+	Public	_ms_l_rmdir
+;----------
+_ms_l_rmdir:
+;----------
+	push	bp
+	mov	bp,sp
+	mov	dx,4[bp]		; DS:DX directory name
+	mov	ax,MS_L_RMDIR
+	call	call71
+	pop	bp
+	ret
 
 	Public	_ms_x_chdir
 ;----------
@@ -432,6 +435,18 @@ _ms_x_chdir:
 ;----------
 	mov	ah,MS_X_CHDIR
 	jmp	ms_dx_call
+
+	Public	_ms_l_chdir
+;----------
+_ms_l_chdir:
+;----------
+	push	bp
+	mov	bp,sp
+	mov	dx,4[bp]		; DS:DX directory name
+	mov	ax,MS_L_CHDIR
+	call	call71
+	pop	bp
+	ret
 
 	Public	_ms_x_creat
 ;----------
@@ -456,6 +471,39 @@ ms_open_creat:
 	jnc	ms_open_ret		; AX = handle if no error
 	neg	ax			; else mark as error code
 ms_open_ret:
+	pop	bp
+	ret
+
+	Public	_ms_l_creat
+;---------
+_ms_l_creat:
+;---------
+	push	bp
+	mov	bp,sp
+	push	si
+	mov	cx,6[bp]		; create attributes
+	mov	bx,OPEN_RW		; create mode
+	mov	dx,18			; create or truncate if exists
+	jmp	ms_l_creat_entry
+
+	Public	_ms_l_open
+;---------
+_ms_l_open:
+;---------
+	push	bp
+	mov	bp,sp
+	push	si
+	mov	bx,6[bp]		; open mode
+	mov	dx,1			; open if exists
+ms_l_creat_entry:
+	mov	si,4[bp]		; DX:SI filename
+	mov	ax,MS_L_OPEN
+	stc
+	int	DOS_INT
+	 jnc	ms_l_open10
+	call	call71_alt_entry
+ms_l_open10:
+	pop	si
 	pop	bp
 	ret
 
@@ -554,22 +602,13 @@ _ms_l_unlink:
 ;-----------
 	push	bp
 	mov	bp,sp
-	mov	ax,MS_L_UNLINK
+	push	si
 	mov	dx,4[bp]		; DS:DX -> filename
-	xor	cx,cx			; no required attributes
-	xor	si,si			; no wildcards or search attributes
-	int	DOS_INT
-	jnc	ms_l_unlink10
-	neg	ax
-	jmp	ms_l_unlink30
-ms_l_unlink10:
-	cmp	ax,7100h		; function implemented?
-	jne	ms_l_unlink20
-	mov	ax,0ff01h		; generic error
-	jmp	ms_l_unlink30
-ms_l_unlink20:
-	sub	ax,ax			; no error
-ms_l_unlink30:
+	mov	cx,6[bp]		; search attributes
+	mov	si,1			; wildcards enabled
+	mov	ax,MS_L_UNLINK
+	call	call71
+	pop	si
 	pop	bp
 	ret
 
@@ -650,6 +689,28 @@ ms_chmod_ret:
 	pop	bp
 	ret
 
+	Public	_ms_l_chmod
+;----------
+_ms_l_chmod:
+;----------
+	push	bp
+	mov	bp,sp
+	mov	dx,4[bp]		; DS:DX filename
+	mov	cx,6[bp]		; file attributes
+	mov	bl,8[bp]		; get/set attributes
+	mov	ax,MS_L_CHMOD
+	stc
+	int	DOS_INT
+	 jnc	ms_l_chmod10
+	call	call71_alt_entry
+	jmp	ms_l_chmod20
+ms_l_chmod10:
+	cmp	byte ptr 8[bp],0	; get attributes?
+	 jne	ms_l_chmod20
+	mov	ax,cx			; return attributes
+ms_l_chmod20:
+	pop	bp
+	ret
 
 	Public	_ms_x_curdir
 ;-----------
@@ -664,6 +725,21 @@ _ms_x_curdir:
 	push	word ptr 4[bp]
 	call	ms_dx_call
 	pop	dx
+	pop	si
+	pop	bp
+	ret
+
+	Public	_ms_l_curdir
+;-----------
+_ms_l_curdir:
+;-----------
+	push	bp
+	mov	bp,sp
+	push	si
+	mov	dl,4[bp]		; DL drive number (0 = current drive)
+	mov	si,6[bp]		; DS:SI path buffer
+	mov	ax,MS_L_CURDIR
+	call	call71
 	pop	si
 	pop	bp
 	ret
@@ -810,6 +886,26 @@ ms_exp_ret:
 	pop	bp
 	CRET	4
 
+	Public	_ms_l_expand
+_ms_l_expand:
+	push	bp
+	mov	bp,sp
+	push	es
+	push	di
+	push	si
+	push	ds
+	pop	es
+	mov	si,6[bp]		; DS:SI source string
+	mov	di,4[bp]		; ES:DI destination buffer
+	xor	cx,cx			; sub function 0, no subst expansion
+	mov	ax,MS_L_EXPAND
+	call	call71
+	pop	si
+	pop	di
+	pop	es
+	pop	bp
+	ret
+
 	Public	_ms_x_wait
 ;---------
 _ms_x_wait:		; retrieve child return code
@@ -851,6 +947,8 @@ _ms_l_first:
 	push	bp
 	mov	bp,sp
 	push	es
+	push	di
+	push	si
 	push	ds
 	pop	es
 	mov	dx,4[bp]		; get ASCII string
@@ -858,20 +956,12 @@ _ms_l_first:
 	mov	si,1			; request DOS date/time format
 	mov	di,8[bp]		; get buffer address
 	mov	ax,MS_L_FIRST		; LFN FindFirst
+	stc
 	int	DOS_INT
-	 jnc	ms_l_first10		; error?
-	neg	ax
-	jmp	ms_l_first30
-ms_l_first10:
-	cmp	ax,7100h		; function not implemented?
-	 jne	ms_l_first20
-	mov	ax,0ff01h		; generic error code
-;	stc
-	jmp	ms_l_first30
-ms_l_first20:
 	mov	es:24h[di],ax		; save search handle
-	sub	ax,ax
-ms_l_first30:
+	call	call71_alt_entry
+	pop	si
+	pop	di
 	pop	es
 	pop	bp
 	ret
@@ -883,25 +973,17 @@ _ms_l_next:
 	push	bp
 	mov	bp,sp
 	push	es
+	push	di
+	push	si
 	push	ds
 	pop	es
 	mov	bx,4[bp]		; get search handle
 	mov	si,1			; request DOS date/time format
 	mov	di,6[bp]		; get buffer address
 	mov	ax,MS_L_NEXT		; LFN FindNext
-	int	DOS_INT
-	 jnc	ms_l_next10		; error?
-	neg	ax
-	jmp	ms_l_next30
-ms_l_next10:
-	cmp	ax,7100h		; function not implemented?
-	 jne	ms_l_next20
-	mov	ax,0ff01h		; generic error code
-;	stc
-	jmp	ms_l_next30
-ms_l_next20:
-	sub	ax,ax
-ms_l_next30:
+	call	call71
+	pop	si
+	pop	di
 	pop	es
 	pop	bp
 	ret
@@ -949,6 +1031,50 @@ _ms_x_rename:
 	pop	di
 	pop	bp
 	ret
+
+	Public	_ms_l_rename
+;-----------
+_ms_l_rename:
+;-----------
+	push	bp
+	mov	bp,sp
+	push	es
+	push	di
+	push	ds
+	pop	es
+	mov	dx,4[bp]		; DS:DX old filename
+	mov	di,6[bp]		; ES:DI new filename
+	mov	ax,MS_L_RENAME
+	call	call71
+	pop	di
+	pop	es
+	pop	bp
+	ret
+
+call71:
+	stc				; just in case it is not implemented
+	int	DOS_INT
+call71_alt_entry:
+	 jnc	call71_20
+	cmp	ax,7100h		; function implemented?
+call73_entry:
+	 jne	call71_10
+	mov	ax,0ffffh		; error code -1 - invalid function
+	jmp	call71_30
+call71_10:
+	neg	ax
+	jmp	call71_30
+call71_20:
+	sub	ax,ax			; no error
+call71_30:
+	ret
+
+call73:
+	stc				; just in case it is not implemented
+	int	DOS_INT
+	 jnc	call71_20
+	cmp	ax,7300h		; function implemented?
+	jmp	call73_entry
 
 	Public	_ms_x_datetime
 ;	ret = _ms_x_datetime (gsflag, h, &time, &date);

@@ -3,7 +3,7 @@
 ;
 ; This file is part of
 ; The DR-DOS/OpenDOS Enhancement Project - http://www.drdosprojects.de
-; Copyright (c) 2002-2004 Udo Kuhnt
+; Copyright (c) 2002-2008 Udo Kuhnt
 */
 
 typedef struct {

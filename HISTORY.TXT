@@ -105,6 +105,33 @@
   character limit when displaying the PATH variable
 - made COMMAND.COM identify its own filename and path after loading to allow it
   to properly reload its transient part if it has been renamed
+(8.2.2008):
+- changed input redirection routines to cancel the redirection and continue to
+  read from the console device when reading from a file and EOF had already
+  been reached.
+- changed input redirection routine to clear register AH before calling the
+  Read function to read from a file to keep it from mistake it for a device
+  request header
+- fixed bug that caused the allocation of the last free cluster on a FAT32
+  drive to reset the free disk space info for that drive to the value
+  previously present in the FS Info Sector before the allocation of the cluster
+  chain
+- made DIR command also use LFN API for checking whether the search string
+  matches any files to prevent spurious "file not found" errors
+- fixed problem with LFN assembly interface code in COMMAND.COM not restoring
+  registers in use by the calling C code
+- added LFN support to DEL command
+- added support for LFN functions 7156h (Rename), 7160h (Expand), 713Bh
+  (Change Directory), 7143h (Get/Set File Attributes) and 7147h (Get Current
+  Directory) to the interface code of COMMAND.COM
+- added full LFN support to DIR
+- made DEL also use LFN functions for interactive mode (opetion /C)
+- added LFN support to CD and RENAME commands
+- added interface code for LFN functions 713Ah (Remove Directory) and 7139h
+  (Create Directory)
+- added LFN support to RD and MD commands
+- added interface code for LFN function 716Ch (Create/Open File)
+- added LFN support to TYPE and TRUENAME commands
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions
