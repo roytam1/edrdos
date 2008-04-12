@@ -1031,6 +1031,7 @@ REG BYTE *cmd;
 	    finddata.ftime=search.ftime;
 	    finddata.fdate=search.fdate;
 	    finddata.fsize=search.fsize;
+	    finddata.fsizeh=0;
 	    strcpy(finddata.sname,search.fname);
 	    finddata.lname[0]=0;
 	  }
@@ -1058,6 +1059,7 @@ REG BYTE *cmd;
 		    finddata.ftime=search.ftime;
 		    finddata.fdate=search.fdate;
 		    finddata.fsize=search.fsize;
+		    finddata.fsizeh=0;
 		    strcpy(finddata.sname,search.fname);
 		    finddata.lname[0]=0;
 		  }
@@ -1090,21 +1092,31 @@ REG BYTE *cmd;
 		if (finddata.fattr & ATTR_DIR)
 /*		    printf(" <DIR>   ");*/
 		  if (OPT(DIR_2COLS))
-		    printf(" <DIR>    ");
+		    printf(" <DIR>     ");
 		  else
-		    printf(" <DIR>        ");
-		else
+		    printf(" <DIR>         ");
+		else {
+		  ret=conv64(&finddata.fsize,&finddata.fsizeh);
 		  if (OPT(DIR_2COLS))
 /*		    printf ("%9lu", search.fsize);*/
-		    printf ("%10lu", finddata.fsize);
+		    printf ("%11lu", finddata.fsize);
 		  else
 		    printf ("%14s", thousands(finddata.fsize));
+		  switch (ret) {
+		    case 1:  printf("K");
+			     break;
+		    default: printf(" ");
+			     break;
+		  }
+		}
 
 		if(finddata.fdate) {	   /* if timestamp exists */
-		    printf (" "); disp_filedate (finddata.fdate);
+/*		    printf (" "); disp_filedate (finddata.fdate);*/
+		    if (!OPT(DIR_2COLS)) printf(" ");
+		    disp_filedate (finddata.fdate);
 		    printf (" "); disp_filetime (finddata.ftime);
 		    if (!OPT(DIR_2COLS)) printf (" %s",finddata.lname);
-		    if ((OPT(DIR_2COLS)) && (nfiles%2 == 0)) printf ("   ");
+		    if ((OPT(DIR_2COLS)) && (nfiles%2 == 0)) printf (" ");
 		}
 		else {
 		    if ((OPT(DIR_2COLS)) && (nfiles%2 == 0)) printf("\t\t\t");
@@ -1125,6 +1137,7 @@ REG BYTE *cmd;
 		finddata.ftime=search.ftime;
 		finddata.fdate=search.fdate;
 		finddata.fsize=search.fsize;
+		finddata.fsizeh=0;
 		strcpy(finddata.sname,search.fname);
 		finddata.lname[0]=0;
 	      }
@@ -1820,6 +1833,7 @@ REG BYTE *s;
 {
 /*	BYTE	 path[MAX_FILELEN];*/
 	BYTE	 path[MAX_LFNLEN];
+	int	 ddrive;
 
 	*path = 0;
 
@@ -1837,9 +1851,23 @@ REG BYTE *s;
 
 	/* if we get an error report it, otherwise display expanded path */
 	if (ret)
-		e_check(ret);
-	else
-		printf(path);
+	  e_check(ret);
+	else {
+	  if (*(s+1)==':') {
+	    if (*s>96)
+	      ddrive=*s-97;
+	    else
+	      ddrive=*s-65;
+	  }
+	  else ddrive=drive;
+	  ret=get_lastdrive();
+	  if (ddrive+1>(ret>>8) || (!(get_driveflags(ddrive)&LFLG_SUBST) && ddrive+1>(ret&0xff))) {
+	    e_check(ED_DRIVE);
+	    return;
+	  }
+	  printf(path);
+	  crlf();
+	}
 }
 
 

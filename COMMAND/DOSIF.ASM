@@ -142,6 +142,7 @@ include	mserror.equ
 else
 include	f52data.def
 endif
+include doshndl.def
 ;
 ifdef	CDOSTMP
 OK_RIF		equ	00111000b	; All Responsese are Valid
@@ -1218,6 +1219,79 @@ _ms_p_getpsp:
 	xchg	ax,bx
 	ret
 endif
+
+	Public	_get_lastdrive
+;-----------
+_get_lastdrive:
+;-----------
+	push	es
+	mov	ah,52h			; Get List of Lists
+	int	DOS_INT
+	mov	ax,es:20h[bx]		; number of drives
+;	xor	ah,ah
+	pop	es
+	ret
+
+	Public	_get_driveflags
+;-----------
+_get_driveflags:
+;-----------
+	push	bp
+	mov	bp,sp
+	push	es
+	mov	ah,52h			; Get List of Lists
+	int	DOS_INT
+	les	bx,es:16h[bx]		; ES:BX -> Path Control Table
+	mov	ax,LDT_LEN		; length of table entry
+	mul	word ptr 4[bp]		; drive number (A=0)
+	add	bx,ax			; offset in LDT
+	mov	ax,es:LDT_FLAGS[bx]
+	pop	es
+	pop	bp
+	ret
+
+	Public	_conv64
+;-----------
+_conv64:
+;-----------
+	push	bp
+	mov	bp,sp
+	push	si
+	push	di
+	mov	si,4[bp]
+	mov	di,6[bp]
+	xor	dx,dx
+conv64_10:
+	cmp	word ptr [di],0		; greater than 2^32-1?
+	 jne	conv64_20
+	cmp	word ptr 2[di],0
+	 je	conv64_40
+conv64_20:
+	mov	ax,1[si]		; /256
+	mov	[si],ax
+	mov	al,3[si]
+	mov	ah,[di]
+	mov	2[si],ax
+	mov	ax,1[di]
+	mov	[di],ax
+	mov	al,3[di]
+	xor	ah,ah
+	mov	2[di],ax
+	mov	cx,2
+conv64_30:
+	shr	byte ptr 2[di],1	; /4
+	rcr	word ptr [di],1
+	rcr	word ptr 2[si],1
+	rcr	word ptr [si],1
+	loop	conv64_30
+	inc	dx
+conv64_40:
+	xchg	ax,dx
+	pop	di
+	pop	si
+	pop	bp
+	ret
+
 	Public	_ms_f_verify
 ;-----------
 _ms_f_verify:

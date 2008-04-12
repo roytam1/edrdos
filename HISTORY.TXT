@@ -132,6 +132,22 @@
 - added LFN support to RD and MD commands
 - added interface code for LFN function 716Ch (Create/Open File)
 - added LFN support to TYPE and TRUENAME commands
+(12.4.2008):
+- changed TRUENAME to fail on nonexistant drives to mimic the behaviour of
+  MS-DOS
+- fixed bug that caused function Int 21h/AX=60h (Expand Filename) to produce
+  malformed paths for SUBSTituted drives
+- made DIR command display meaningful sizes for huge files on FAT+ drives if
+  DOSLFN is loaded
+- added missing CR LF to TRUENAME output to make piping it into FIND feasible
+- fixed bug in TRUENAME that caused it to erroneously report "invalid drive
+  specified" for drives that did not physically exist themselves but had been
+  SUBSTituted for a physical drive
+- fixed bug in TRUENAME that caused it to report spurious info for drive
+  letters beyond the LASTDRIVE setting
+- added LFN support to the COPY command
+- increased heap size and enabled stack checks in COMMAND.COM to guard against
+  heap/stack collisions
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

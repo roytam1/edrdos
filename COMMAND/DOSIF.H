@@ -45,6 +45,7 @@ EXTERN	VOID	CDECL	debug(VOID);
 EXTERN BYTE * CDECL   heap_get(WORD);
 EXTERN BYTE * CDECL   heap(VOID);
 EXTERN VOID CDECL     heap_set(BYTE *);
+EXTERN UWORD CDECL    heap_size(VOID);
 #endif
 
 #if !defined(MWC)
@@ -142,6 +143,10 @@ EXTERN WORD CDECL     ms_f_parse (BYTE *, BYTE *, UBYTE);
 EXTERN WORD CDECL     ms_f_delete (BYTE *);
 EXTERN VOID CDECL     restore_term_addr();
 #endif
+
+EXTERN UWORD CDECL     get_lastdrive(VOID);
+EXTERN UWORD CDECL     get_driveflags(UWORD);
+EXTERN UWORD CDECL     conv64(ULONG *, ULONG *);
 
 #if defined(DOSPLUS)
 EXTERN WORD CDECL     ms_x_getcp(UWORD *, UWORD *);

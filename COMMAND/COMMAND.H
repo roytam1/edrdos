@@ -222,6 +222,8 @@ N_CMD {
 #define OPEN_WRITE	(OPEN_WO | OPEN_DRW)	/* Open Write Only	*/
 #define	OPEN_RDWR	(OPEN_RW | OPEN_DRW)	/* Open Read and Write	*/
 
+#define	LFLG_SUBST	0x1000		/* Drive is SUBSTituted		*/
+
 /*
  *	Set STACK to 1 to use dynamic string storage fuunction STACK
  *	which will reserve a any number of bytes on the stack for

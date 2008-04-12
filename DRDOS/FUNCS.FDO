@@ -2298,7 +2298,10 @@ fdos_expand21:
 	les	bx,current_ldt
 
 	test	es:LDT_FLAGS[bx],LFLG_PHYSICAL
-	 jz	fdos_expand50		; make sure it's a valid drive
+;	 jz	fdos_expand50		; make sure it's a valid drive
+	 jnz	fdos_expand22		; make sure it's a valid drive
+	jmp	fdos_expand50
+fdos_expand22:
 	push ss ! pop es
 	mov	di,offset pri_pathname	; build name in pathname buffer
 	lds	si,dword ptr fdos_pb+2
@@ -2317,6 +2320,8 @@ fdos_expand21:
 	lds	di,ss:current_ldt
 	test	LDT_FLAGS[di],LFLG_NETWRKD+LFLG_PHYSICAL
 	 jz	fdos_expand25
+	test	LDT_FLAGS[di],LFLG_SUBST
+	 jnz	fdos_expand25
 	mov	bx,LDT_ROOTLEN[di]
 	cmp	bx,2
 	 jbe	fdos_expand25

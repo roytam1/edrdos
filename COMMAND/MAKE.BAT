@@ -1,6 +1,8 @@
 @ECHO off
 SET TOOLS=C:\MASM\BINB
 
+SET OPT_S=
+
 SET MASM=C:\MASM\BIN\ML.EXE /c /Zm
 SET WATCOM=C:\WATCOM
 SET WATCOMH=%WATCOM%\H
@@ -48,24 +50,24 @@ IF ERRORLEVEL 1 GOTO FAILED
 %MASM% /DDOSPLUS /DWATCOMC /DPASCAL /DFINAL /I.\ /Fo.\bin\crit.obj .\crit.asm
 IF ERRORLEVEL 1 GOTO FAILED
 
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\com.obj .\com.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\com.obj .\com.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\comint.obj .\comint.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\comint.obj .\comint.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\support.obj .\support.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\support.obj .\support.c
 IF ERRORLEVEL 1 GOTO FAILED
 
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\printf.obj .\printf.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\printf.obj .\printf.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\batch.obj .\batch.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\batch.obj .\batch.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\global.obj .\global.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\global.obj .\global.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\config.obj .\config.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\config.obj .\config.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\comcpy.obj .\comcpy.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\comcpy.obj .\comcpy.c
 IF ERRORLEVEL 1 GOTO FAILED
-%WC% /s /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\cmdlist.obj .\cmdlist.c
+%WC% %OPT_S% /DFINAL /i=. /ms /os /dWATCOMC /i=%WATCOMH% /fo.\bin\cmdlist.obj .\cmdlist.c
 IF ERRORLEVEL 1 GOTO FAILED
 
 ECHO -w -d -f- -K -O -X -Z -c -ms -I%BCC20H% -DMESSAGE -DDOSPLUS -zSCGROUP -zTCODE -zR_MSG > RESP1
@@ -113,13 +115,13 @@ ECHO Can't find that tool!
 REM **********************
 REM CLEAN UP THE AREA
 REM **********************
-rem SET TOOLS=
-rem SET MASM=
-rem SET WC=
-rem SET LINK510=
-rem SET BCC20=
-rem SET WATCOMH=
-rem SET BCC20H=
-rem SET LOCTOOLS=
+SET TOOLS=
+SET MASM=
+SET WC=
+SET LINK510=
+SET BCC20=
+SET WATCOMH=
+SET BCC20H=
+SET LOCTOOLS=
+SET OPT_S=
 
-

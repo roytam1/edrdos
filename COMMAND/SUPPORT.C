@@ -1253,11 +1253,16 @@ BOOLEAN  append_stardotstar;
 GLOBAL BOOLEAN file_exist(filename)
 BYTE *filename;
 {
-BYTE filebuf[MAX_PATHLEN];
+/*BYTE filebuf[MAX_PATHLEN];*/
+BYTE filebuf[MAX_LFNLEN];
 WORD h;
 
 	get_filename(filebuf, filename, NO);
-	if((h = ms_x_open(filebuf, OPEN_READ)) > 0) {
+	h=ms_l_open(filebuf,OPEN_READ);
+	if (h==ED_FUNCTION)
+	  h=ms_x_open(filebuf,OPEN_READ);
+/*	if((h = ms_x_open(filebuf, OPEN_READ)) > 0) {*/
+	if (h>0) {
 	    ms_x_close(h);
 	    return TRUE;
 	}

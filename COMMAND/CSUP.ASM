@@ -439,7 +439,7 @@ _heap_size:
 	push	bp
 	mov	bp,sp
 	mov	ax,heap_top
-        add     ax,STACKSLOP
+;        add     ax,STACKSLOP
 	sub	bp,ax		
         jnc     noprobs
         xor     bp,bp
@@ -458,14 +458,14 @@ noprobs:
 PUBLIC	_heap
 _heap:
 	mov	ax,heap_top
-ifndef FINAL
+;ifndef FINAL
 ifdef WATCOMC
 	add	ax,STACKSLOP	; we'd better do some stack checking
 	cmp	ax,sp		; 'cause the C isn't doing it now
 	 jae	heap_error
 	sub	ax,STACKSLOP
 endif
-endif
+;endif
 	ret
 	
 ;
