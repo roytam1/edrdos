@@ -122,3 +122,4 @@ extern char near tue_d[];
 extern char near us_date[];
 extern char near wed_d[];
 extern char near yes_no[];
+extern char near msg_colour[];

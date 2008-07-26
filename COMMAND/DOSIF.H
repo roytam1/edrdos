@@ -203,3 +203,13 @@ EXTERN	BOOLEAN CDECL	extended_error(VOID);
 EXTERN	WORD	CDECL	get_lines_page(VOID);
 EXTERN	WORD	CDECL	get_scr_width(VOID);
 EXTERN	WORD	CDECL	novell_copy(WORD,WORD,ULONG);
+
+#define COLDATA struct coldata
+COLDATA {
+	BYTE	flags;
+	BYTE	fgbg;
+	BYTE	border;
+};
+
+EXTERN	VOID	CDECL	get_colour(COLDATA *);
+EXTERN	VOID	CDECL	set_colour(COLDATA *);

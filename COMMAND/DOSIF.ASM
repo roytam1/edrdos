@@ -1225,7 +1225,7 @@ endif
 _get_lastdrive:
 ;-----------
 	push	es
-	mov	ah,52h			; Get List of Lists
+	mov	ah,52h			; get List of Lists
 	int	DOS_INT
 	mov	ax,es:20h[bx]		; number of drives
 ;	xor	ah,ah
@@ -1239,7 +1239,7 @@ _get_driveflags:
 	push	bp
 	mov	bp,sp
 	push	es
-	mov	ah,52h			; Get List of Lists
+	mov	ah,52h			; get List of Lists
 	int	DOS_INT
 	les	bx,es:16h[bx]		; ES:BX -> Path Control Table
 	mov	ax,LDT_LEN		; length of table entry
@@ -3244,6 +3244,95 @@ nc_exit:
 	ret
 
 _nov_connection	ENDP
+
+	Public	_get_colour
+;-----------
+_get_colour:
+;-----------
+	push	bp
+	mov	bp,sp
+	push	es
+	mov	ah,52h			; get List of Lists
+	int	DOS_INT
+	les	bx,F52_CONDEV		; get console driver address
+	mov	ax,es:18[bx]
+	mov	dl,es:20[bx]
+	mov	bx,4[bp]
+	mov	ds:[bx],ax
+	mov	ds:2[bx],dl
+	pop	es
+	pop	bp
+	ret
+
+	Public	_set_colour
+;-----------
+_set_colour:
+;-----------
+	push	bp
+	mov	bp,sp
+	push	es
+	mov	bx,4[bp]
+	mov	ax,ds:[bx]
+	mov	dl,ds:2[bx]
+	push	ax
+	mov	ah,52h			; get List of Lists
+	int	DOS_INT
+	pop	ax
+	les	bx,F52_CONDEV		; get console driver address
+	mov	dh,al
+	and	al,1
+	mov	es:18[bx],al
+	test	dh,2
+	 jnz	set_colour10
+	mov	es:19[bx],ah
+	mov	es:20[bx],dl
+set_colour10:
+	push	ax
+	mov	bh,dl
+	mov	ax,1001h
+	int	10h
+	pop	bx
+	xchg	bh,bl
+	call	col_screen
+	pop	es
+	pop	bp
+	ret
+
+col_screen:
+	mov	ah,0fh			; get current screen page
+	int	10h			; screen page in BH
+	mov	ah,3			; get cursor position
+	int	10h
+	push	dx
+
+	mov	si,40h			; BIOS data segment
+	mov	es,si
+	xor	si,si
+	xor	dx,dx			; start in upper left corner
+	mov	cx,1			; only one char per time
+col_screen10:
+	push	es
+	push	si
+	mov	ah,2			; set cursor position
+	int	10h
+	mov	ah,8			; read character with colour
+	int	10h			; AL = char, AH = colour
+	mov	ah,9			; write char back, BL = colour
+	int	10h
+	pop	si
+	pop	es
+	inc	dl			; mov to next column
+	cmp	dl,es:4ah[si]		; already at the end of the line?
+	 jne	col_screen10		; no, do it again
+	xor	dl,dl			; else continue at first column
+	inc	dh			; in next line
+	cmp	dh,es:84h[si]		; already last in last line
+	 jbe	col_screen10		; not finished, yet
+
+	pop	dx
+	mov	ah,2			; restore cursor position
+	int	10h
+	ret
 
 _TEXT	ENDS
 	END

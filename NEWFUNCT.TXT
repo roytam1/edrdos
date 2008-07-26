@@ -19,11 +19,23 @@ In Config.sys:
  [HI]INSTALLLAST
 		works like INSTALL/HIINSTALL, but loads program after the DOS
 		data segment relocation
+ COLOUR fg,bg,bd
+		changes the foreground, background and border colour of the
+		DOS screen
 
  [HI]BUFFERS	can now also use upper memory if available
  FILES/FCBS	uses upper memory by default if available
  LASTDRIVE	uses upper memory by default if available
  HISTORY	uses upper memory by default if available
+
+In batch files/on the command line:
+
+ COLOUR [fg][,[bg][,[bd]]]|ON|OFF
+		changes the foreground, background and border colour of the
+		DOS screen
+
+ TIME /T	display current time without prompting for new one
+ DATE /T	display current date without prompting for new one
 
 New or changed system calls:
 

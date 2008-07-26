@@ -17,7 +17,7 @@ _msg_ver111	db	NUL , NUL
 	public	_msg_version
 	public	msg_version
 msg_version	label	byte
-_msg_version	db	LF, "Enhanced DR-DOS 7.01.08 WIP (12.4.2008) ", "based on Caldera OpenDOS 7.01", LF, NUL
+_msg_version	db	LF, "Enhanced DR-DOS 7.01.08 WIP (26.7.2008) ", "based on Caldera OpenDOS 7.01", LF, NUL
 	public	_msg_lbl
 	public	msg_lbl
 msg_lbl	label	byte
@@ -511,6 +511,10 @@ _msg_longjmp	db	"LONGJMP Error %d", LF, NUL
 	public	msg_nohelp
 msg_nohelp	label	byte
 _msg_nohelp	db	"Unable to give Help. Cannot find file %s.", LF, NUL
+	public	_msg_colour
+	public	msg_colour
+msg_colour	label	byte
+_msg_colour	db	"COLOUR = %s,%d,%d,%d", LF, NUL
 
 _MSG	ends
 

@@ -34,9 +34,9 @@ if not exist %LINK510% goto badtool
 
 rem %MASM% /Fo.\bin\message message
 rem IF ERRORLEVEL 1 GOTO FAILED
-%MASM% /Fo.\bin\resident resident
+%MASM% /Fo.\bin\resident.obj resident.asm
 IF ERRORLEVEL 1 GOTO FAILED
-%MASM% /Fo.\bin\txhelp txhelp
+%MASM% /Fo.\bin\txhelp.obj txhelp.asm
 IF ERRORLEVEL 1 GOTO FAILED
 
 %MASM% /DDOSPLUS /DWATCOMC /DPASCAL /DFINAL /I.\ /Fo.\bin\message.obj .\message.asm

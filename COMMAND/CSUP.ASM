@@ -53,7 +53,7 @@ DGROUP	GROUP	_DATA
 
 codeOFFSET	equ	offset CGROUP:
 dataOFFSET	equ	offset DGROUP:
-STACKSLOP	equ	128		; Minimum Stack Size
+STACKSLOP	equ	256		; Minimum Stack Size
 
 jmps	macro	label			; Define a Macro to generate the
 	jmp	SHORT label		; Short Jmp instruction

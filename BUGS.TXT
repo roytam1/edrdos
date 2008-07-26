@@ -61,6 +61,8 @@ version 1) to indicate that they should not mount these drives.
 Other things known not to work perfectly:
 - The DIR command currently does not show the actual size of files larger than
   4 GB; this will probably be fixed in one of the next WIP versions.
+  Update (12.4.2008): DIR at least now shows large file sizes if DOSLFN is
+  loaded.
 - Function Int 21h/AX=71A6 is supposed to give the "Unique File Identifier" of
   an open file. Until someone can tell me how Windows determines this value, it
   will be shown as 0 instead. Also, the number of "links to this file" is

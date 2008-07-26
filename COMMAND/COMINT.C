@@ -630,11 +630,22 @@ BYTE	*s;
  *	Display or Set the current date making full use of the DOS
  *	international system call.
  */
+#define	DATE_SHOW	(flags & 1)
 
 GLOBAL VOID CDECL cmd_date(s)
 BYTE	*s;
 {
 	BYTE	buffer[18];			/* Local Input Buffer */
+	UWORD	flags;
+
+	if(f_check (s, "t", &flags, NO))	/* Check for valid Flags    */
+	    return;
+
+	if(DATE_SHOW) {
+	  printf(CUR_DATE);
+	  disp_sysdate ();
+	  return;
+	}
 
 	if (*s) {
 	    if(check_date(s))
@@ -1510,6 +1521,7 @@ REG BYTE *s;
 	BOOLEAN	lfnsearch;
 	UWORD	shandle;
 	BOOLEAN	cont;
+	BYTE	t[MAX_LFNLEN];
 
 	if(f_check(s, "c", &flags, NO))		/* Check the selected flags */
 	    return;				/* and return on error	    */
@@ -1542,20 +1554,21 @@ REG BYTE *s;
 	    }
 	}
 
-	if (!iswild(srcfile)) {
+/*	if (!iswild(srcfile)) {
 	    attr = ms_l_chmod(srcfile,0,0);
-	    if (ret==ED_FUNCTION)
+	    if (attr==ED_FUNCTION)
 	      attr=ms_x_chmod(srcfile,0,0);
-	    if ((attr > 0) && (attr & ATTR_DIR)) {
+	    if ((attr > 0) && (attr & ATTR_DIR)) {*/
 
 		/* Don't try to rename directories. Leave it to RENDIR. */
 
-		printf(MSG_USE_RENDIR);
+/*		printf(MSG_USE_RENDIR);
 		return;
 	    }
-	}
+	}*/
 
-	if(nofiles(srcfile, ATTR_ALL, YES, NO))	/* if no source files then  */
+	strcpy(t,srcfile);
+	if(nofiles(t, ATTR_ALL, YES, NO))	/* if no source files then  */
 	    return;				/* error message and stop   */
 
 	if(nofiles(dstfile, ATTR_ALL, NO, NO))	/* Check the Destination    */
@@ -1584,13 +1597,13 @@ REG BYTE *s;
 	strcpy(pattern, fptr(dstfile)); 	/* Save the destination	    */
 						/* match pattern.	    */
 
-	ret=ms_l_first(srcfile,(ATTR_STD&(~ATTR_SYS)),&finddata);
+	ret=ms_l_first(srcfile,((ATTR_STD|ATTR_DIR)&(~ATTR_SYS)),&finddata);
 	if (ret!=ED_FUNCTION) {
 	  shandle=finddata.handle;
 	  lfnsearch=1;
 	}
 	else {
-	  ret=ms_x_first(srcfile,(ATTR_STD&(~ATTR_SYS)),&search);
+	  ret=ms_x_first(srcfile,((ATTR_STD|ATTR_DIR)&(~ATTR_SYS)),&search);
 	  if (!ret) {
 	    strcpy(finddata.lname,search.fname);
 	  }
@@ -1768,6 +1781,7 @@ BYTE *s;
  *	Displays or Sets the current system time 
  */
 #define	TIME_CON	(flags & 1)
+#define	TIME_SHOW	(flags & 2)
 
 GLOBAL VOID CDECL cmd_time(s)
 REG BYTE *s;
@@ -1775,7 +1789,7 @@ REG BYTE *s;
 	BYTE	buffer[18];			/* Local Input Buffer */
 	UWORD	flags;				/* Continuous Display	*/
 
-	if(f_check (s, "c", &flags, NO))	/* Check for valid Flags    */
+	if(f_check (s, "ct", &flags, NO))	/* Check for valid Flags    */
 	    return;
 
 	if(TIME_CON) {
@@ -1795,6 +1809,12 @@ REG BYTE *s;
 		}
 #endif
 	    }
+	}
+
+	if(TIME_SHOW) {
+	  printf(CUR_TIME);
+	  disp_systime ();
+	  return;
 	}
 
 	if(*s) {
@@ -2512,4 +2532,61 @@ int	region, i;
 
 #endif
 
+GLOBAL VOID CDECL cmd_colour(s)
+BYTE	*s;
+{
+	COLDATA	colset;
+	WORD	fg,bg;
+	BOOLEAN	error=NO;
 
+	get_colour(&colset);
+	fg=colset.fgbg&15;
+	bg=colset.fgbg>>4;
+
+	s=deblank(s);
+
+	if (*s) {
+	
+	  switch(onoff(s)) {
+	    case	YES:
+	      colset.flags=1;
+	      s+=2;
+	      break;
+	    case	NO:
+	      colset.flags=2;
+	      fg=7;
+	      bg=0;
+	      colset.border=0;
+	      s+=3;
+	      break;
+	    default:
+	      if(*s) {
+	        if (isdigit(*s)) getdigit(&fg,&s);
+	        if (*s && !strchr(",",*s++)) error=TRUE;
+	        if (isdigit(*s)) getdigit(&bg,&s);
+	        if (*s && !strchr(",",*s++)) error=TRUE;
+	        if (isdigit(*s)) getdigit(&colset.border,&s);
+	        s=deblank(s);
+	        if (*s||fg>15||bg>15||colset.border>63) error=TRUE;
+	        if (!error) {
+		  colset.flags=1;
+	        }
+	      }
+	  }
+
+	  s=deblank(s);
+	  if (*s) error=TRUE;
+
+	  if (error) {
+	    printf("Invalid format!\n");
+	    return;
+	  }
+	  else {
+	    colset.fgbg=bg*16+fg;
+	    set_colour(&colset);
+	  }
+
+	}
+	else
+	  printf(MSG_COLOUR,colset.flags ? MSG_ON : MSG_OFF,fg,bg,colset.border);
+}

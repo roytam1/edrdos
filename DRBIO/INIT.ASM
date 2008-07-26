@@ -224,7 +224,7 @@ con_drvr	dw	CG:aux_drvr, 0	; link to next device driver
 		dw	DA_CHARDEV+DA_SPECIAL+DA_ISCOT+DA_ISCIN+DA_IOCTL
 		dw	CG:strat, CG:IntCon
 		db	'CON     '
-col_mode	dw	15,0
+col_mode	db	0,7,0
 
 aux_drvr	dw	CG:prn_drvr, 0		; link to next device driver
 		dw	DA_CHARDEV
@@ -507,7 +507,8 @@ Fastcon10:
 	push	cx
 	mov	cx,40h
 	mov	es,cx
-	mov	bx,cs:col_mode		; get colour mode
+	mov	bx,cs:word ptr col_mode	; get colour mode
+	xchg	bh,bl
 	cmp	bh,0			; check if COLOUR is active
 	 je	Fastcon15		; no, continue normally
 	cmp	al,7			; check for non-printable chars
@@ -538,7 +539,7 @@ Fastcon11:
 	mov	dl,es:4ah
 	dec	dl
 	mov	dh,es:84h
-	mov	bh,cs:byte ptr col_mode
+	mov	bh,cs:byte ptr col_mode+1
 	int	10h
 	pop	dx
 Fastcon12:
@@ -1095,7 +1096,7 @@ CODE	ends
 RCODE_ALIGN	segment public para 'RCODE'
 ifndef ROMSYS
 ;	db	1100h dup(0)		; reserve space for command.com
-	db	1580h dup(0)		; reserve space for command.com
+	db	1A00h dup(0)		; reserve space for command.com
 endif
 RCODE_ALIGN	ends
 

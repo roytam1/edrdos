@@ -2262,8 +2262,8 @@ func_colour:				; Set fore-/background/border colour
 	 jc	func_colour30		; no numerical value follows, skip
 	and	al,15			; only 0-15 supported
 	les	bx,dword ptr condev_off	; store in console driver
-	mov	es:byte ptr 19[bx],1	; and mark COLOUR as active
-	mov	es:18[bx],al
+	mov	es:byte ptr 18[bx],1	; and mark COLOUR as active
+	mov	es:19[bx],al
 	call	separator		; more to set?
 	 jc	func_colour30		; no
 func_colour10:
@@ -2275,8 +2275,8 @@ func_colour10:
 	mov	cl,4			; * 16
 	shl	al,cl
 	les	bx,dword ptr condev_off	; store in console driver
-	mov	es:byte ptr 19[bx],1	; mark COLOUR as active
-	or	es:18[bx],al
+	mov	es:byte ptr 18[bx],1	; mark COLOUR as active
+	or	es:19[bx],al
 	call	separator		; finished now?
 	 jc	func_colour30		; it seems so
 func_colour20:
@@ -2284,16 +2284,16 @@ func_colour20:
 	 jc	func_colour30		; if there is one
 	and	al,15			; only use lower four bits
 	les	bx,dword ptr condev_off	; store in console driver
-	mov	es:byte ptr 19[bx],1	; mark COLOUR as active
+	mov	es:byte ptr 18[bx],1	; mark COLOUR as active
 	or	es:20[bx],al
 	mov	bh,al			; and set border colour right away
 	mov	ax,1001h
 	int	10h
 func_colour30:
 	les	bx,dword ptr condev_off	; get address of console driver
-	cmp	es:byte ptr 19[bx],1	; check if any colour was changed
+	cmp	es:byte ptr 18[bx],1	; check if any colour was changed
 	 jne	func_colour40		; apparently not
-	mov	bl,es:byte ptr 18[bx]	; else get the fg/bg colour
+	mov	bl,es:byte ptr 19[bx]	; else get the fg/bg colour
 	call	col_screen		; and apply it to the whole screen
 func_colour40:	
 	pop	es			; done

@@ -347,3 +347,5 @@ EXTERN	BYTE * cdecl dls_msg1(UWORD);
 #endif
 
 #endif
+
+#define MSG_COLOUR	msg_colour

@@ -246,3 +246,5 @@
 	extrn	wed_d	: byte
 	extrn	_yes_no	: byte
 	extrn	yes_no	: byte
+	extrn	_msg_colour	: byte
+	extrn	msg_colour	: byte

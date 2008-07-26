@@ -125,7 +125,7 @@
   (Change Directory), 7143h (Get/Set File Attributes) and 7147h (Get Current
   Directory) to the interface code of COMMAND.COM
 - added full LFN support to DIR
-- made DEL also use LFN functions for interactive mode (opetion /C)
+- made DEL also use LFN functions for interactive mode (option /C)
 - added LFN support to CD and RENAME commands
 - added interface code for LFN functions 713Ah (Remove Directory) and 7139h
   (Create Directory)
@@ -148,6 +148,17 @@
 - added LFN support to the COPY command
 - increased heap size and enabled stack checks in COMMAND.COM to guard against
   heap/stack collisions
+(26.7.2008):
+- fixed bug in critical error handler of COMMAND.COM that triggered stack
+  overflows when accessing a drive with no disk inserted and selecting the
+  option "abort"
+- fixed bug that caused erratic behaviour instead of displaying an error when
+  RENAME was used on directories
+- adjusted heap/stack size for COMMAND.COM to fix another problem with COPY
+- enhanced RENAME command to also work on directories
+- added option /T to DATE and TIME to simply display current date/time without
+  prompting for new one
+- implemented new COLOUR command for command line and batch files
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions
