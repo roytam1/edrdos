@@ -224,6 +224,7 @@ con_drvr	dw	CG:aux_drvr, 0	; link to next device driver
 		dw	DA_CHARDEV+DA_SPECIAL+DA_ISCOT+DA_ISCIN+DA_IOCTL
 		dw	CG:strat, CG:IntCon
 		db	'CON     '
+		db	'COLOUR'
 col_mode	db	0,7,0
 
 aux_drvr	dw	CG:prn_drvr, 0		; link to next device driver

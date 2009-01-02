@@ -101,8 +101,8 @@ INT31_SEGMENT	equ	word ptr .00C6h		; DOS Data Segment pointer
 						; for ROM systems
 JMPF_OPCODE	equ	0EAh			; 8086 JMPF instruction
 
-F5KEY		equ	3F00h
-F8KEY		equ	4200h
+;F5KEY		equ	3F00h
+;F8KEY		equ	4200h
 
 SWITCH_F	equ	01h
 SWITCH_N	equ	02h
@@ -130,7 +130,7 @@ INITCODE	CSEG	PARA 'INITCODE'
 		db	'XXXX-0000-987654321X '
 
 		db	'Patches to original OpenDOS source code '
-		db	'Copyright (c) 2002-2008 Udo Kuhnt'
+		db	'Copyright (c) 2002-2009 Udo Kuhnt'
 
 
 	Public	biosinit

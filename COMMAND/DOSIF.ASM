@@ -3255,9 +3255,27 @@ _get_colour:
 	mov	ah,52h			; get List of Lists
 	int	DOS_INT
 	les	bx,F52_CONDEV		; get console driver address
-	mov	ax,es:18[bx]
-	mov	dl,es:20[bx]
-	mov	bx,4[bp]
+get_colour10:
+	xor	cx,cx
+	dec	cx			; CX=FFFFh
+	mov	ax,es
+	cmp	ax,cx			; check if CON driver address valid
+	 jne	get_colour20
+	cmp	bx,cx
+	 jne	get_colour20
+	xor	ax,ax			; FFFF:FFFFh means end of chain
+	xor	dx,dx
+	jmp	get_colour40
+get_colour20:
+	call	check_colour		; test for CON with COLOUR support
+	 je	get_colour30
+	les	bx,es:[bx]		; go to next driver in chain
+	jmp	get_colour10
+get_colour30:
+	mov	ax,es:24[bx]		; get current COLOUR parameters
+	mov	dl,es:26[bx]
+get_colour40:
+	mov	bx,4[bp]		; and store them in variables
 	mov	ds:[bx],ax
 	mov	ds:2[bx],dl
 	pop	es
@@ -3271,32 +3289,65 @@ _set_colour:
 	push	bp
 	mov	bp,sp
 	push	es
-	mov	bx,4[bp]
-	mov	ax,ds:[bx]
-	mov	dl,ds:2[bx]
-	push	ax
 	mov	ah,52h			; get List of Lists
 	int	DOS_INT
-	pop	ax
 	les	bx,F52_CONDEV		; get console driver address
+set_colour10:
+	xor	cx,cx
+	dec	cx			; CX=FFFFh
+	mov	ax,es
+	cmp	ax,cx			; check if CON driver address valid
+	 jne	set_colour20
+	cmp	bx,cx
+	 je	set_colour40		; FFFF:FFFFh means end of chain
+set_colour20:
+	call	check_colour		; test for CON with COLOUR support
+	 je	set_colour30
+	les	bx,es:[bx]		; go to next driver in chain
+	jmp	set_colour10
+set_colour30:
+	push	bx
+	mov	bx,4[bp]		; get new parameters
+	mov	ax,ds:[bx]
+	mov	dl,ds:2[bx]
+	pop	bx
 	mov	dh,al
 	and	al,1
-	mov	es:18[bx],al
+	mov	es:24[bx],al		; and update COLOUR with these
 	test	dh,2
-	 jnz	set_colour10
-	mov	es:19[bx],ah
-	mov	es:20[bx],dl
-set_colour10:
+	 jnz	set_colour35
+	mov	es:25[bx],ah
+	mov	es:26[bx],dl
+set_colour35:
 	push	ax
 	mov	bh,dl
-	mov	ax,1001h
+	mov	ax,1001h		; set new border colour
 	int	10h
 	pop	bx
 	xchg	bh,bl
-	call	col_screen
+	call	col_screen		; update screen colours
+set_colour40:
 	pop	es
 	pop	bp
 	ret
+
+check_colour:
+	push	ds			; check for COLOUR support in driver
+	push	si
+	push	di
+	push	cs
+	pop	ds
+	lea	si,cs:colour_sig	; signature
+	lea	di,10[bx]
+	mov	cx,14			; length of signature
+	cld
+	repz	cmpsb			; compare string
+	pop	di
+	pop	si
+	pop	ds
+	ret				; zero flag set if COLOUR supported
+
+colour_sig	db	"CON     ","COLOUR"
 
 col_screen:
 	mov	ah,0fh			; get current screen page

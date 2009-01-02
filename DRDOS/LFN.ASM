@@ -130,12 +130,15 @@ f7142_20:				; mode 1: relative to current position
 	mov	[si],ax			; and store new position as result
 	mov	ax,2[si]
 	adc	ax,es:DHNDL_POSHI[bx]
+	mov	es:DHNDL_POSHI[bx],ax
 	mov	2[si],ax
 	mov	ax,4[si]
 	adc	ax,es:DHNDL_POSXLO[bx]
+	mov	es:DHNDL_POSXLO[bx],ax
 	mov	4[si],ax
 	mov	ax,6[si]
 	adc	ax,es:DHNDL_POSXHI[bx]
+	mov	es:DHNDL_POSXHI[bx],ax
 	mov	6[si],ax
 	jmps	f7142_40
 

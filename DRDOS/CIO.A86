@@ -480,7 +480,7 @@ go_int23:
 	call	get_dseg		; Get our data segment
 	mov	exit_type,TERM_BREAK	; Force EXIT_TYPE to TERM_BREAK
 	mov	ax,4C00h		; "Good-Bye Cruel World" 
-    jmps    do23_20
+;    jmps    do23_20
     do23_10:
 	push	ds			; Otherwise restart the aborted func
 	call	get_dseg

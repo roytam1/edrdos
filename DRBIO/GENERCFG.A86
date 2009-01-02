@@ -84,8 +84,8 @@
 TRUE	   	equ	0FFFFh		; value of TRUE
 FALSE	   	equ	0		; value of FALSE
 
-F5KEY		equ	3F00h		; keys returned by BIOS
-F8KEY		equ	4200h		;  in boot_options
+;F5KEY		equ	3F00h		; keys returned by BIOS
+;F8KEY		equ	4200h		;  in boot_options
 
 SWITCH_F	equ	01h		; in boot_switches
 SWITCH_N	equ	02h
@@ -2262,8 +2262,8 @@ func_colour:				; Set fore-/background/border colour
 	 jc	func_colour30		; no numerical value follows, skip
 	and	al,15			; only 0-15 supported
 	les	bx,dword ptr condev_off	; store in console driver
-	mov	es:byte ptr 18[bx],1	; and mark COLOUR as active
-	mov	es:19[bx],al
+	mov	es:byte ptr 24[bx],1	; and mark COLOUR as active
+	mov	es:25[bx],al
 	call	separator		; more to set?
 	 jc	func_colour30		; no
 func_colour10:
@@ -2275,8 +2275,8 @@ func_colour10:
 	mov	cl,4			; * 16
 	shl	al,cl
 	les	bx,dword ptr condev_off	; store in console driver
-	mov	es:byte ptr 18[bx],1	; mark COLOUR as active
-	or	es:19[bx],al
+	mov	es:byte ptr 24[bx],1	; mark COLOUR as active
+	or	es:25[bx],al
 	call	separator		; finished now?
 	 jc	func_colour30		; it seems so
 func_colour20:
@@ -2284,16 +2284,16 @@ func_colour20:
 	 jc	func_colour30		; if there is one
 	and	al,15			; only use lower four bits
 	les	bx,dword ptr condev_off	; store in console driver
-	mov	es:byte ptr 18[bx],1	; mark COLOUR as active
-	or	es:20[bx],al
+	mov	es:byte ptr 24[bx],1	; mark COLOUR as active
+	or	es:26[bx],al
 	mov	bh,al			; and set border colour right away
 	mov	ax,1001h
 	int	10h
 func_colour30:
 	les	bx,dword ptr condev_off	; get address of console driver
-	cmp	es:byte ptr 18[bx],1	; check if any colour was changed
+	cmp	es:byte ptr 24[bx],1	; check if any colour was changed
 	 jne	func_colour40		; apparently not
-	mov	bl,es:byte ptr 19[bx]	; else get the fg/bg colour
+	mov	bl,es:byte ptr 25[bx]	; else get the fg/bg colour
 	call	col_screen		; and apply it to the whole screen
 func_colour40:	
 	pop	es			; done
@@ -2446,6 +2446,25 @@ func_query05:
 	cmp	al,'?'			; is it another '?', is so swallow it
 	 je	func_query		;  and go round again
 	dec	si			; it wasn't a '?', forget we looked
+	mov	dl,1			; assume execution in main phase
+	push	si
+	push	dx
+	call	scan			; scan the command list
+	pop	dx
+	pop	si
+	 jc	func_query06
+	mov	dx,CFG_FLAGS[di]	; flags for this config command
+	cmp	configpass,0		; CF_ALL does not include pass 0
+	 je	func_query06
+	test	dx,CF_ALL		; present in all phases?
+	 jnz	func_query07		; yes, proceed with query
+func_query06:
+	and	dl,CF_NOF-1		; config pass to execute in
+	cmp	dl,configpass		; does the phase number match?
+	 je	func_query07		; yes, proceed with query
+	stc
+	jmp	func_query50		; no, no need to ask for it
+func_query07:
 	push	si			; save current position
 	lodsb				; get next real char
 	xor	cx,cx			; assume no prompt string
@@ -3881,7 +3900,7 @@ endif
 	dw	cmd_timeout,	func_timeout,	1	; set ? TIMEOUT
 	dw	cmd_switch,	func_switch,	1+CF_ALL; SWITCH=n
 	dw	cmd_onerror,	func_onerror,	1+CF_ALL+CF_LC; ONERROR='n' optional command
-	dw	cmd_query,	func_query, CF_NOF+CF_LC; ?optional command
+	dw	cmd_query,	func_query, CF_ALL+CF_NOF+CF_LC; ?optional command
 	dw	cmd_echo,	func_echo,	1+CF_LC	; ECHO=string
 	dw	cmd_exit,	func_exit,	CF_ALL	; EXIT
 	dw	cmd_error,	func_error,	1+CF_ALL; ERROR='n'

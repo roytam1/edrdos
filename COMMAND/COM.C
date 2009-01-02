@@ -260,7 +260,7 @@ UWORD   num_of_vcs; /* number of vcs on this station */
 #endif
 
 #if !defined(CDOSTMP)
-BYTE	autoexec_name[13] = "autoexec.bat";
+BYTE	autoexec_name[13] = "AUTOEXEC.BAT";
 #endif
 
 #if defined(DOSPLUS)
@@ -447,6 +447,7 @@ BYTE *cmd;
 	UWORD	FAR *p_batch_seg;
 #endif
 	BYTE	lferror = 0;
+	BYTE	*h;
 	strcpy(kbdptr, "");			/* start with no commands */
 
 	if (!(get_cmdname(heap())))
@@ -794,7 +795,14 @@ BYTE *cmd;
 	    strcpy(heap(), "!");
 	    strcat(heap(), autoexec_name);
 	    if((ret = file_exist(heap()+1)) != 0) {
-		if (boot_key_scan_code != 0x3f00 /*F5*/)
+		if (boot_key_scan_code==0x4200) { /*F8*/
+		  h=heap()+strlen(heap())+1;
+		  strcpy(h,"Execute ");
+		  strcat(h,autoexec_name);
+		  optional_line(h);
+		  if (*h==0) boot_key_scan_code=0x3f00;
+		}
+		if (boot_key_scan_code != 0x3f00) /*F5*/
 		    strcat(kbdptr,heap());
 		break;
 	    } else {

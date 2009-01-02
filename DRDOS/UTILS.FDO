@@ -1534,8 +1534,13 @@ find_label:				; find label only
 find_label30:
 	call	finddfcb		; find matching file name
 	 jz	find_label40		; skip if not found
-	test	DATTS[bx],DA_VOLUME
-	 jz	find_label30		; try again if not a volume label
+;	test	DATTS[bx],DA_VOLUME
+;	 jz	find_label30		; try again if not a volume label
+	mov	al,DATTS[bx]		; get attributes
+	and	al,256-DA_RO-DA_ARCHIVE	; ignore read only and archive bits
+	cmp	al,DA_VOLUME		; is it a volume label?
+	 jnz	find_label30		; try again if not a volume label
+	or	al,01			; clear ZF
 find_label40:
 	mov	finddfcb_mask,DA_VOLUME*256
 	ret				; back to no VOL labels or pending dels
@@ -2384,7 +2389,7 @@ BDOS_DATA	dseg	word
 join_name	db	'd:\filename.ext',0
 
 		db	'Patches to original OpenDOS source code '
-		db	'Copyright (c) 2002-2008 Udo Kuhnt'
+		db	'Copyright (c) 2002-2009 Udo Kuhnt'
 
 BDOS_CODE	cseg
 

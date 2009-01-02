@@ -32,3 +32,7 @@
 	extrn	yes_char	: byte
 	extrn	_run_char	: byte
 	extrn	run_char	: byte
+	extrn	_f5key_msg	: byte
+	extrn	f5key_msg	: byte
+	extrn	_f8key_msg	: byte
+	extrn	f8key_msg	: byte

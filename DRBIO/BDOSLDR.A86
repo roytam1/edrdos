@@ -186,6 +186,7 @@ dos_version_check:
 	mov	ax,4452h
 	int	21h			; try and get DRDOS version number
 	 jc	dev_fail		;  it's not DRDOS !
+	and	ax,0fffeh		; don't be so picky
 	cmp	ax,VER_MUSTBE		; version check the DRDOS BDOS
 	 jne	dev_fail		;  reject all but the one we want
 	ret				; return now I'm happy
@@ -281,8 +282,9 @@ open_file15:
 	mov	start_cluster+2,bp
 	mov	start_cluster,cx
 	call	clus2sec
+	xor	ah,ah
 	mov	al,BT_sctr_per_cluster
-	cbw
+;	cbw
 	mul	BT_bytes_per_sector
 	mov	bx,32
 	div	bx

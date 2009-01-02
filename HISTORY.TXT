@@ -159,6 +159,25 @@
 - added option /T to DATE and TIME to simply display current date/time without
   prompting for new one
 - implemented new COLOUR command for command line and batch files
+(2.1.2009):
+- fixed bug in CLS command that sometimes caused screen foreground/background
+  colour not to be updated when COLOUR was active
+- fixed bug in function Int 21h/AX=7142h (Long LSEEK) that caused only the
+  lowest word of the 64-bit file pointer to be updated when moving the pointer
+  relative to its current position
+- made the COLOUR command in COMMAND.COM follow the driver chain to look for
+  the internal CON driver if an external driver (e.g. ANSI.SYS) has been loaded
+- added an option to skip AUTOEXEC.BAT when single-stepping the configuration
+  files
+- added proper messages when configuration files are single-stepped or skipped
+  due to F8/F5 key pressed
+- fixed 64 KB cluster support in BDOS loader
+- fixed bug that caused the ? (Query) command in CONFIG.SYS not to execute the
+  command it was used on
+- fixed bug in Ctrl-C/Break handler that could cause it not to restore the
+  stack properly in some cases when aborting the program
+- fixed bug in functions 4E/4Fh (Find First/Next) that caused them to also find
+  LFN entries in searches for only volume labels
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

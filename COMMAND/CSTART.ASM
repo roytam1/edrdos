@@ -3087,11 +3087,11 @@ _int10_cls:
 	mov	ah,52h			; get List of Lists address
 	int	21h
 	les	bx,F52_CONDEV		; address of console device driver
-	mov	ax,es:18[bx]		; COLOUR command active?
+	mov	ax,es:24[bx]		; COLOUR command active?
 	cmp	al,01
 	 jne	int10_cls10		; no, then skip
 	push	ax
-	mov	bh,es:20[bx]		; colour of the border
+	mov	bh,es:26[bx]		; colour of the border
 	mov	ax,1001h		; set border colour
 	int	10h
 	pop	ax
@@ -3100,6 +3100,7 @@ _int10_cls:
 	xor	bx,bx
 	xor	cx,cx
 	push	bp
+	mov	bp,sp
 	mov	dh,4[bp]
 	pop	bp
 ;	mov	dh,byte ptr es:84h[bx]

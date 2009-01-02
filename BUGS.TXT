@@ -38,7 +38,8 @@ Enhanced DR-DOS v7.01.07 again adds new features that might prove incompatible
 with older software:
 - It now supports drives with 128K cluster size. This is mostly untested, since
   there are no DOS tools that support this cluster size. Existing tools
-  probably cannot handle this size.
+  probably cannot handle this size. Due to limitations of the bootsector and
+  BDOS loader code, it also cannot boot from those drives.
   Update (30.5.2005): The new DR-DOS FORMAT v1.0 supports this cluster size.
 - Several config.sys commands that DR-DOS 7.03 uses to move data structures to
   upper memory are now supported, some of which have been enhanced to provide
@@ -71,3 +72,10 @@ Other things known not to work perfectly:
   because there is no time zone information in DOS. This also affects the time
   stamps given by function 71A6. The inverse function BL=00 has not been
   implemented, yet.
+- DOSLFN and probably also other LFN tools use some reserved bytes in directory
+  entries to store additional time stamps; alas, some of those bytes are used
+  by DR-DOS as part of the file password protection system. The result is that
+  hidden files with a creation file time set may show up in directory searches
+  not looking for hidden files. If this is a problem to you, you can either
+  compile a version of DRDOS.SYS without specifying /DPASSWORD in MAKE.BAT or
+  not use hidden files with Long Filenames.

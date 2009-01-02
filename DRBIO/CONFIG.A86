@@ -152,6 +152,19 @@ cfg_skip:
 
 	call	get_boot_options	; look for user keypress
 	mov	boot_options,ax		;  return any options
+	cmp	ax,F5KEY
+	 jne	cfg_no_f5
+	lea	dx,cs:f5key_msg
+	mov	ah,MS_C_WRITESTR
+	int	DOS_INT
+	jmps	cfg_no_f8
+cfg_no_f5:
+	cmp	ax,F8KEY
+	 jne	cfg_no_f8
+	lea	dx,cs:f8key_msg
+	mov	ah,MS_C_WRITESTR
+	int	DOS_INT
+cfg_no_f8:
 
 	mov	configPass,1		; second pass of CONFIG.SYS
 	mov	cfg_head,0
@@ -1337,6 +1350,7 @@ INITDATA	DSEG 'INITDATA'
 	extrn	boot_options:word
 
 include	initmsgs.def				; Include TFT Header File
+include	biosmsgs.def
 
 
 	extrn	preload_drv:byte
