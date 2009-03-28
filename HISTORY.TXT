@@ -178,6 +178,21 @@
   stack properly in some cases when aborting the program
 - fixed bug in functions 4E/4Fh (Find First/Next) that caused them to also find
   LFN entries in searches for only volume labels
+(28.3.2009):
+- made BDOS loader fall back to init drive if actual boot drive can not be
+  determined, this will (hopefully) fix reported problems with some boot
+  managers and non-standard MBRs
+- made all password handling routines ignore file passwords for files on FAT32
+  drives and for files with no access rights set to prevent hidden files
+  created or modified by DOSLFN from being mistaken for password-protected
+- restructured function 7142h (Long Lseek) to make it check the subfunction
+  number before the file handle
+- inverted error codes in function 73h since this is how error_exit expects
+  them
+- added limited support for function 714E/4Fh (LFN FindFirst/Next, but without
+  LFN support) which are needed for FAT+ support in DIR
+- added limited support for subfunctions 3 and 4 of function 7143h (LFN Set/Get
+  Last Write Time, but without LFN support) which are used by XCOPY
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions

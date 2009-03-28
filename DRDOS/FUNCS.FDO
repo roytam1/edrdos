@@ -657,8 +657,12 @@ open_disk:
 	 jz	open8			; bail out if not found
 	mov	al,byte ptr fdos_pb+8	; check requested attributes
 if PASSWORD
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	open1			; yes, then ignore passwords
 	cmp	word ptr DPWD[bx],0
 	 je	open1
+	test	DPWM[bx],0fffh		; no access rights set?
+	 jz	open1			; then assume it is unprotected
 	or	al,DA_HIDDEN
 open1:
 endif
@@ -927,8 +931,12 @@ unlink_attribs:
 ;
 	mov	al,byte ptr fdos_pb+8	; check attributes
 if PASSWORD
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	unlink_attribs10	; yes, then ignore passwords
 	cmp	word ptr DPWD[bx],0
 	 je	unlink_attribs10
+	test	DPWM[bx],0fffh		; no access rights set?
+	 jz	unlink_attribs10	; then assume it is unprotected
 	or	al,DA_HIDDEN
 unlink_attribs10:
 endif
@@ -1204,7 +1212,7 @@ chmod12:
 chmod13:
 	xor	DATTS[bx],dl		; set new attributes
 if PASSWORD
-	jmps	chmod90
+	jmp	chmod90
 else
 	jmp	update_dir		; update directory
 endif
@@ -1230,7 +1238,11 @@ chmod20:
 	pop	dx
 	pop	cx
 	pop	bx
+	xor	ax,ax
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	chmod25			; then assume no password set
 	mov	ax,DPWD[bx]		; assume get encrypted password
+chmod25:
 	cmp	cl,4			;  was it ?
 	 jne	chmod50
 endif					; yes, return encrypted password
@@ -1259,8 +1271,11 @@ chmod50:				; set password/password mode
 	call	hash_pwd		;  compute password hash code
 chmod60:
 	pop	ds
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	chmod65			; then passwords do not apply
 	or	DATTS[bx],DA_HIDDEN	; file will be hidden
 	mov	DPWD[bx],ax		; set new file password
+chmod65:
 	test	ax,ax			; null password?
 	 jnz	chmod70
 	xor	dx,dx			; can't be protected....
@@ -1702,8 +1717,12 @@ search_n10:
 	 jz	search_next_err		; if not found
 	mov	al,attributes		; get attributes that we support
 if PASSWORD
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	search_n20		; yes, then ignore passwords
 	cmp	word ptr DPWD[bx],0	; does it have a password?
 	 jz	search_n20		; skip if not
+	test	DPWM[bx],0fffh		; no access rights set?
+	 jz	search_n20		; then assume it is unprotected
 	or	al,DA_HIDDEN		; else include hidden files
 search_n20:
 endif
@@ -1769,6 +1788,12 @@ search_n35:
 	and	ah,11100000b
 	shr	ah,1
 	shr	ah,1
+	test	fdos_pb+6,1		; use FAT+/LFN extensions?
+	 jz	search_n38		; no, return 32bit file size
+	or	al,ah
+	mov	es:[di]-11,al		; return extended file size
+	jmps	search_n40
+search_n38:
 	or	al,ah
 	 je	search_n40		; if below 4 GB then skip
 	sub	di,4			; else go back to file size field
@@ -2455,8 +2480,12 @@ fdos_moverr:
 move30:					; same drive for source & destination
 	mov	al,byte ptr fdos_pb+8	; check attributes
 if PASSWORD
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	move31			; yes, then ignore passwords
 	cmp	save_area+DPWD,0
 	 je	move31
+	test	word ptr save_area+DPWM,0fffh	; no access rights set?
+	 jz	move31			; then assume it is unprotected
 	or	al,DA_HIDDEN
 move31:
 endif

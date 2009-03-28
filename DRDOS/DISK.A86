@@ -595,6 +595,7 @@ fdos_name:
 	mov	FD_NAMEOFF,dx		; Initialise Pointer
 	mov	FD_NAMESEG,es
 	mov	FD_ATTRIB,cx		; and attributes
+	mov	FD_LFNSEARCH,0		; do not use FAT+/LFN extensions
 	jmp	fdos_ax_crit
 
 eject

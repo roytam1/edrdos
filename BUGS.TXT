@@ -64,6 +64,7 @@ Other things known not to work perfectly:
   4 GB; this will probably be fixed in one of the next WIP versions.
   Update (12.4.2008): DIR at least now shows large file sizes if DOSLFN is
   loaded.
+  Update (28.3.2009): DIR no longer needs DOSLFN to show large file sizes.
 - Function Int 21h/AX=71A6 is supposed to give the "Unique File Identifier" of
   an open file. Until someone can tell me how Windows determines this value, it
   will be shown as 0 instead. Also, the number of "links to this file" is
@@ -79,3 +80,14 @@ Other things known not to work perfectly:
   not looking for hidden files. If this is a problem to you, you can either
   compile a version of DRDOS.SYS without specifying /DPASSWORD in MAKE.BAT or
   not use hidden files with Long Filenames.
+  Update (6.1.2009): I have solved the problem by making Enhanced DR-DOS ignore
+  all file passwords on FAT32 drives (on which passwords cannot be used,
+  anyway) and for files with no access rights set (which cannot happen for
+  actually password-protected files). However, using DOSLFN on password-
+  protected files will probably corrupt the passwords or accidentally unprotect
+  the files.
+- Enhanced DR-DOS 7.01.08 WIP (28.3.2009) includes partial support for several
+  LFN functions (7143h,714E/4Fh,71A1h) which are used by COMMAND.COM or other
+  tools, however, they do not actually support LFN functionality. If you need
+  full LFN support, you have to load DOSLFN or a similar TSR. Also, the
+  functions 714E/4Fh do not support two or more concurrent searches.

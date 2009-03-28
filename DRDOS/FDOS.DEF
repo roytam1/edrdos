@@ -126,3 +126,4 @@ FD_DDIO_STARTHIGH equ	fdos_data + 8
 FD_DDIO_DMAOFF	equ	fdos_data + 10
 FD_DDIO_DMASEG	equ	fdos_data + 12
 
+FD_LFNSEARCH	equ	fdos_data + 10

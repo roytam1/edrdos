@@ -7,7 +7,7 @@ In Config.sys:
  HISTACKS	moves interrupt stacks to upper or high memory
  HILASTDRIVE	moves drive table to upper or high memory
  DDSCS=UMB|HIGH|HIGH,UMB
-		moves drive scriptor tables (DDSCS) to upper or high memory;
+		moves drive descriptor tables (DDSCS) to upper or high memory;
 		default is DDSC=LOW
  DOSDATA=UMB	moves main DOS data segment to upper memory; default is LOW
  XBDA=LOW|UMB|LOW,UMB
@@ -45,18 +45,22 @@ New or changed system calls:
 	/AX=3001h	Get Version Flag
 
 	/AX=7142h	Long LSEEK
-			This function works like 42h but uses a 64-bit (QWORD)
+			This function works like 42h but uses a 64bit (QWORD)
 			buffer pointed to by DS:DX for both the signed offset
 			and the resulting absolute file pointer position; the
 			type of movement is read from CL
 	/AX=71A6h	Get File Info
-	/AX=71A7h,BL=01	Convert DOS Time to Windows 64-Bit Time
+	/AX=71A7h,BL=01	Convert DOS Time to Windows 64bit Time
+	/AX=714E/714Fh	LFN FindFirst/Next
+	/AX=71A1h	LFN FindClose
+	/AX=7143h,
+	 BL=3/4		LFN Set/Get Last Write Time
 
  Int 21h/AX=440dh	(Generic IOCTL) now supports category code 48h (FAT32)
 			stubs have been added for sub functions 4ah, 4bh, 6ah
 			and 6bh	(lock/unlock logical/physical drive) that fake
 			successful operation
-	/AH=1fh/32h	(Get DPB) no longer returns DPB for FAT32 drives
+	/AH=1fh/32h	(Get DPB) no longer returns DPBs for FAT32 drives
 	/AH=30h		(Get DOS Version) now reports OEM code eeh (DR DOS)
 			instead of 00h (PC DOS)
 	/AX=3306h	(Get True DOS Version) now returns 7.01 instead of

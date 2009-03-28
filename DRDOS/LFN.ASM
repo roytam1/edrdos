@@ -2,7 +2,7 @@
 ;
 ; This file is part of
 ; The DR-DOS/OpenDOS Enhancement Project - http://www.drdosprojects.de
-; Copyright (c) 2002-2008 Udo Kuhnt
+; Copyright (c) 2002-2009 Udo Kuhnt
 
 	include	bdos.equ
 	include	fdos.equ
@@ -10,6 +10,7 @@
 	include doshndl.def
 	include	lfn.equ
 	include	fdos.def
+	include	mserror.equ
 
 BDOS_CODE	cseg	word
 
@@ -62,11 +63,36 @@ PCM_CODE	cseg	byte
 	extrn	mul32:near
 	extrn	mul64:near
 	extrn	dos_entry:near
+	extrn	fdos_first:near
+	extrn	fdos_next:near
+	extrn	fdos_entry:near
+	extrn	lds_si_dmaptr:near
+	extrn	local_disk:near
+	extrn	path_prep:near
+	extrn	check_no_wild:near
+	extrn	finddfcbf:near
+	extrn	update_dir:near
 
 	Public	func71
 func71:
 	cmp	al,42h			; function 7142h?
 	 je	func7142		; yes
+	cmp	al,43h			; function 7143h?
+	 jne	f71_4e
+	jmp	func7143		; yes
+f71_4e:
+	cmp	al,4eh			; function 714eh?
+	 jne	f71_4f
+	jmp	func714e		; yes
+f71_4f:
+	cmp	al,4fh			; function 714fh?
+	 jne	f71_a1
+	jmp	func714f		; yes
+f71_a1:
+	cmp	al,0a1h			; function 71a1h?
+	 jne	f71_a6
+	jmp	func71a1		; yes
+f71_a6:
 	cmp	al,0a6h			; function 71a6h?
 	 jne	func71_a7
 	jmp	func71a6
@@ -84,6 +110,21 @@ func71_error:
 	ret
 
 func7142:
+	push	ds
+	lds	bp,int21regs_ptr
+	mov	ax,ds:reg_CX[bp]	; AL = original CL
+	cmp	al,2			; valid subfunction number?
+	 jbe	f7142_02
+	mov	ax,1			; error: invalid function number
+	lds	bp,int21regs_ptr
+	mov	ds:reg_AX[bp],ax	; return error code
+	or	ds:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
+	pop	ds
+	stc
+	ret
+
+f7142_02:
+	pop	ds
 	mov	ax,bx
 	call	vfy_dhndl_ptr_AX	; check file handle number
 	call	redir_dhndl_offer
@@ -93,24 +134,15 @@ func7142:
 f7142_05:
 	call	check_handle		; check if valid file handle
 	push	ds
-	lds	bp,int21regs_ptr	; DS:SI -> QWORD for position offset and result
+	lds	bp,int21regs_ptr
 	mov	ax,ds:reg_CX[bp]	; AL = original CL
-	mov	si,ds:reg_DX[bp]
+	mov	si,ds:reg_DX[bp]	; DS:SI -> QWORD for position offset and result
 	mov	ds,ds:reg_DS[bp]
 	or	al,al
 	 je	f7142_10		; seek from beginning
 	dec	al
 	 je	f7142_20		; seek from current position
-	dec	al
-	 je	f7142_30		; seek from end
-	mov	ax,1			; error: invalid function number
-	pop	ds
-	push	ds
-	lds	bp,int21regs_ptr	; set carry flag
-	or	ds:reg_FLAGS[bp],CARRY_FLAG
-	pop	ds
-	stc
-	ret
+	jmps	f7142_30		; seek from end
 
 f7142_10:				; mode 0: set absolute position
 	mov	ax,[si]			; copy 64-bit offset to position
@@ -165,6 +197,141 @@ f7142_40:
 	call	return_AX_CLC
 	clc
 f7142_dev:
+	ret
+
+func7143:
+	cmp	bl,3			; check subfunction range
+	 je	f7143_10
+	cmp	bl,4
+	 je	f7143_10
+	mov	ax,1			; error: invalid function number
+f7143_error:
+	les	bp,int21regs_ptr
+	mov	es:reg_AX[bp],ax	; return error code
+	or	es:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
+	ret
+
+f7143_10:
+	mov	FD_FUNC,ax		; function number
+	mov	FD_NAMEOFF,dx		; filename
+	mov	FD_NAMESEG,es
+	mov	dx,offset fdos_data	; parameter block
+	push	ds			; set up FDOS stack frame
+	push	dx
+	push	ax
+	push	ax
+	call	local_disk		; make local copy of parameters
+	call	path_prep		; parse path
+	call	check_no_wild		; wildcards not allowed
+	 jnz	f7143_20
+	mov	ax,2			; file not found
+	jmps	f7143_error
+f7143_20:
+	call	finddfcbf		; locate dir entry
+	 jnz	f7143_30
+	mov	ax,2			; file not found
+	jmps	f7143_error
+f7143_30:
+	les	bp,int21regs_ptr
+	mov	ax,es:reg_BX[bp]
+	cmp	al,3			; subfunction 3?
+	 je	f7143_set_writetime
+f7143_get_writetime:
+	mov	cx,DTIME[bx]		; last write time
+	mov	di,DDATE[bx]		; last write date
+	mov	es:reg_CX[bp],cx
+	mov	es:reg_DI[bp],di
+	jmps	f7143_exit
+f7143_set_writetime:
+	mov	cx,es:reg_CX[bp]	; new last write time
+	mov	di,es:reg_DI[bp]	; new last write date
+	mov	DTIME[bx],cx
+	mov	DDATE[bx],di
+	call	update_dir		; update dir entry
+f7143_exit:
+	xor	ax,ax			; no error
+	jmp	return_AX_CLC
+
+func714e:
+	mov	ax,4eh			; FindFirst
+	xor	ch,ch
+	mov	FD_ATTRIB,cx		; search attributes
+	mov	FD_NAMEOFF,dx		; search pattern
+	mov	FD_NAMESEG,es
+	jmps	f714e_entry
+
+func714f:
+	mov	ax,4fh			; FindNext
+f714e_entry:
+	mov	FD_FUNC,ax
+	mov	FD_LFNSEARCH,1		; use FAT+/LFN extensions
+	push	ds
+	push	ss:dma_segment		; save old DTA
+	push	ss:dma_offset
+	mov	ss:dma_segment,ds
+	lea	di,f714e_dta
+	mov	ss:dma_offset,di
+	mov	dx,offset fdos_data
+	call	fdos_entry		; call FindNext function
+	cmp	ax,ED_LASTERROR		; has an error occurred?
+	 jb	f714f_10		; no
+	pop	ss:dma_offset		; restore old DTA
+	pop	ss:dma_segment
+	pop	ds
+	neg	ax
+	les	bp,int21regs_ptr
+	mov	es:reg_AX[bp],ax	; return error code
+	or	es:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
+	ret
+f714f_10:
+	les	bp,int21regs_ptr	; ES:BP -> initial parameters
+	mov	di,es:reg_DI[bp]
+	push	es:reg_ES[bp]
+	pop	es			; ES:DI -> Find Data buffer
+	call	lds_si_dmaptr		; DS:SI -> DTA
+	add	si,15h			; start at file attribute field
+	lodsb				; file attribute
+	xor	ah,ah
+	stosw
+	xor	ax,ax			; set additional file times to 0
+	stosw
+	stosw
+	stosw
+	stosw
+	stosw
+	stosw
+	stosw
+	stosw
+	stosw
+	movsw				; file time
+	movsw				; file date
+	xor	ax,ax			; zero high dword
+	stosw
+	stosw
+	mov	al,-7[si]		; extended file size
+	stosw
+	xor	ax,ax
+	stosw
+	movsw				; file size low
+	movsw
+	add	di,8			; skip over reserved bytes
+	push	di
+	mov	cx,13
+	repnz	movsb			; copy file name
+	pop	di
+	add	di,260			; start of short name field
+	mov	es:byte ptr [di],0	; no short name
+	pop	ss:dma_offset		; restore old DTA
+	pop	ss:dma_segment
+	pop	ds
+	les	bp,int21regs_ptr
+	xor	ax,ax
+	mov	es:reg_CX[bp],ax		; Unicode conversion flags
+	call	return_AX_CLC		; no error
+	ret
+
+func71a1:
+	call	return_AX_CLC
 	ret
 
 func71a6:
@@ -433,13 +600,17 @@ f71a701_80:
 	add	sp,6
 	ret
 
-ndays	db	31,28,31,30,31,30,31,31,30,31,30,31
+ndays		db	31,28,31,30,31,30,31,31,30,31,30,31
 
 
 BDOS_DATA	dseg	word
 
 	extrn	dcnt:word
 
+f714e_dta	rb	43
+
 PCMODE_DATA	dseg	word
 
 	extrn	int21regs_ptr:dword
+	extrn	dma_segment:word
+	extrn	dma_offset:word

@@ -499,7 +499,11 @@ path_prep_done10:
 	pop	fdos_hds_root
 	pop	fdos_hds_root+2
 	 jz	path_prep_error		; (shouldn't happen)
+	xor	ax,ax
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	path_prep_done15	; then assume no password set
 	mov	ax,DPWD[bx]		; get password hash code from entry
+path_prep_done15:
 	mov	local_password,ax	; ensure we can get back down
 	lea	si,DNAME[bx]		; point to it's name
 	mov	cx,11
@@ -2456,9 +2460,8 @@ if PASSWORD
 	 jcxz	stamp_dir_entry10	;  if so apply it
 	mov	bx,dirp
 	cmp	dosfat,FAT32		; FAT32 file system?
-	 je	stamp_dir_entry05	; then do not overwrite this entry
+	 je	stamp_dir_entry10	; then do not overwrite this entry
 	mov	DPWM[bx],PWM_ANY	; deny all for compatibility
-stamp_dir_entry05:
 	or	DATTS[bx],DA_HIDDEN	;  make dir entry hidden
 	mov	DPWD[bx],cx		;  with this password
 stamp_dir_entry10:
@@ -2588,7 +2591,11 @@ check_pwd:		; check for password mismatch
 	callf	ss:fdos_stub
 	 jnc	check_pwd20
 
+	xor	ax,ax
+	cmp	dosfat,FAT32		; FAT32 filesystem?
+	 je	check_pwd05		; then assume no password set
 	mov	ax,DPWD[bx]		; get password hash code from entry
+check_pwd05:
 	 jcxz	check_pwd10		; exit if no password
 	cmp	ax,global_password	; compare with default password
 	 je	check_pwd10		; yes, go ahead
