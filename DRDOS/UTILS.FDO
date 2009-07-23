@@ -368,6 +368,7 @@ path_prep_cont:
 	push	es
 	call	path_prep_root		; fake a '.' entry for the root
 	pop	es
+path_prep_cont05:
 	lods	es:al			; get next char
 	dec	si			; forget we looked
 	test	al,al			; if just a '\' stop now
@@ -375,11 +376,13 @@ path_prep_cont:
 	 jnz	path_prep_cont10
 	 jmp	path_prep_done
 path_prep_cont10:
-    call    check_slash     
+	call	check_slash     
 	 jne	path_prep_next		;  otherwise start processing from root
-	mov	ax,ED_ACCESS		; get correct error code
-	stc				;  and return if \\
-	ret
+	lods	es:al
+	jmps	path_prep_cont05
+;	mov	ax,ED_ACCESS		; get correct error code
+;	stc				;  and return if \\
+;	ret
 
 path_prep_curdir:
 ; We need to select the current directory as a start for our operations
@@ -1921,10 +1924,12 @@ vfy_dhndl30:
 	mov	ss:word ptr current_dhndl+WORD,es
 	test	es:DHNDL_MODE[bx],DHM_NOCRIT
 	 jnz	vfy_dhndl40		; are critical errors allowed ?
+	clc
 	ret
 
 vfy_dhndl40:
 	or	valid_flg,NO_CRIT_ERRORS
+	clc
 	ret				; remember no critical errors possible
 
 vfy_dhndl50:
@@ -1935,6 +1940,7 @@ vfy_dhndl50:
 vfy_dhndl_err:
 	add	sp,WORD			; pop return addr - return to caller
 	mov	bx,ED_H_MATCH		;  with "invalid handle" error
+	stc
 	ret
 
 
@@ -2392,6 +2398,7 @@ BDOS_DATA	dseg	word
 
 join_name	db	'd:\filename.ext',0
 
+		db	'Enhanced DR-DOS 7.01.08 WIP (23.7.2009) '
 		db	'Patches to original OpenDOS source code '
 		db	'Copyright (c) 2002-2009 Udo Kuhnt'
 

@@ -1788,7 +1788,7 @@ search_n35:
 	and	ah,11100000b
 	shr	ah,1
 	shr	ah,1
-	test	fdos_pb+6,1		; use FAT+/LFN extensions?
+	test	fdos_pb+10,1		; use FAT+/LFN extensions?
 	 jz	search_n38		; no, return 32bit file size
 	or	al,ah
 	mov	es:[di]-11,al		; return extended file size

@@ -470,10 +470,12 @@ build_remote_path:
 	 ja	build_remote_path30	; return "invalid drive" if error
 	xchg	ax,dx			; DL = ASCIIZ supplied drive
 	lodsw				; get possible '\\'
+	jmps	build_remote_path15
 build_remote_path10:
 	mov	ss:word ptr current_ldt,0ffffh
 	call	check_dslash		; is it "\\"
 	 je	build_remote_path20		; if so forget about the drive #
+build_remote_path15:
 	call	isremote		; test if drive DL is remote
 if JOIN
 	 jb	build_remote_path30	; return "invalid drive" if JOINed

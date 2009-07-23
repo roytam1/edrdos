@@ -113,20 +113,18 @@ func7142:
 	push	ds
 	lds	bp,int21regs_ptr
 	mov	ax,ds:reg_CX[bp]	; AL = original CL
+	pop	ds
 	cmp	al,2			; valid subfunction number?
 	 jbe	f7142_02
-	mov	ax,1			; error: invalid function number
-	lds	bp,int21regs_ptr
-	mov	ds:reg_AX[bp],ax	; return error code
-	or	ds:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
-	pop	ds
-	stc
-	ret
-
+	jmp	f71_error_func
 f7142_02:
-	pop	ds
 	mov	ax,bx
-	call	vfy_dhndl_ptr_AX	; check file handle number
+	call	vfy_dhndl_ptr_AX_call	; check file handle number
+	 jnc	f7142_handle_ok
+	mov	ax,bx
+	neg	ax
+	jmp	f71_error
+f7142_handle_ok:
 	call	redir_dhndl_offer
 	test	es:DHNDL_ATTR[bx],DHAT_DEV
 	 jz	f7142_05
@@ -204,13 +202,7 @@ func7143:
 	 je	f7143_10
 	cmp	bl,4
 	 je	f7143_10
-	mov	ax,1			; error: invalid function number
-f7143_error:
-	les	bp,int21regs_ptr
-	mov	es:reg_AX[bp],ax	; return error code
-	or	es:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
-	ret
-
+	jmp	f71_error_func
 f7143_10:
 	mov	FD_FUNC,ax		; function number
 	mov	FD_NAMEOFF,dx		; filename
@@ -225,12 +217,12 @@ f7143_10:
 	call	check_no_wild		; wildcards not allowed
 	 jnz	f7143_20
 	mov	ax,2			; file not found
-	jmps	f7143_error
+	jmp	f71_error
 f7143_20:
 	call	finddfcbf		; locate dir entry
 	 jnz	f7143_30
 	mov	ax,2			; file not found
-	jmps	f7143_error
+	jmp	f71_error
 f7143_30:
 	les	bp,int21regs_ptr
 	mov	ax,es:reg_BX[bp]
@@ -264,7 +256,8 @@ func714f:
 	mov	ax,4fh			; FindNext
 f714e_entry:
 	mov	FD_FUNC,ax
-	mov	FD_LFNSEARCH,1		; use FAT+/LFN extensions
+;	mov	FD_LFNSEARCH,1		; use FAT+/LFN extensions
+	mov	fdos_pb+10,1		; use FAT+/LFN extensions
 	push	ds
 	push	ss:dma_segment		; save old DTA
 	push	ss:dma_offset
@@ -279,10 +272,7 @@ f714e_entry:
 	pop	ss:dma_segment
 	pop	ds
 	neg	ax
-	les	bp,int21regs_ptr
-	mov	es:reg_AX[bp],ax	; return error code
-	or	es:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
-	ret
+	jmp	f71_error
 f714f_10:
 	les	bp,int21regs_ptr	; ES:BP -> initial parameters
 	mov	di,es:reg_DI[bp]
@@ -326,7 +316,7 @@ f714f_10:
 	pop	ds
 	les	bp,int21regs_ptr
 	xor	ax,ax
-	mov	es:reg_CX[bp],ax		; Unicode conversion flags
+	mov	es:reg_CX[bp],ax	; Unicode conversion flags
 	call	return_AX_CLC		; no error
 	ret
 
@@ -336,7 +326,12 @@ func71a1:
 
 func71a6:
 	mov	ax,bx
-	call	vfy_dhndl_ptr_AX	; check file handle number
+	call	vfy_dhndl_ptr_AX_call	; check file handle number
+	 jnc	f71a6_handle_ok
+	mov	ax,bx
+	neg	ax
+	jmp	f71_error
+f71a6_handle_ok:
 	call	redir_dhndl_offer
 	test	es:DHNDL_ATTR[bx],DHAT_DEV
 	 jnz	f71a6_dev		; skip if character device
@@ -413,7 +408,7 @@ f71a6_dev:
 func71a7:
 	cmp	bl,01			; sub function 01?
 	 je	f71a701			; yes
-	jmp	func71_error
+	jmp	f71_error_func
 f71a701:				; Convert DOS time to Windows time
 	call	f71a701_entry
 	xor	ax,ax
@@ -602,10 +597,24 @@ f71a701_80:
 
 ndays		db	31,28,31,30,31,30,31,31,30,31,30,31
 
+vfy_dhndl_ptr_AX_call:
+	call	vfy_dhndl_ptr_AX	; setup stack for vfy_dhndl_ptr_AX
+	ret
+
+f71_error_func:
+	mov	ax,1			; invalid function number
+
+f71_error:
+	les	bp,int21regs_ptr
+	mov	es:reg_AX[bp],ax	; return error code
+	or	es:reg_FLAGS[bp],CARRY_FLAG ; set carry flag
+	stc
+	ret
 
 BDOS_DATA	dseg	word
 
 	extrn	dcnt:word
+	extrn	fdos_pb:word
 
 f714e_dta	rb	43
 

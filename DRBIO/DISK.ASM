@@ -2326,7 +2326,19 @@ equip_loop:
 
 	call	new_unit		; ES:DI -> UDSC
 	mov	es:UDSC_RUNIT[di],dl	; set physical drive (ROS code)
+	push	dx
+	mov	ah,ROS_LBACHK
+	mov	bx,55aah
+	int_____DISK_INT
+	pop	dx
+	 jc	equip_nolba
+	cmp	bx,0aa55h
+	 jnz	equip_nolba
+	xor	ah,ah
+	mov	es:UDSC_INT13EXT[di],ax	; version of int 13 extensions
+	mov	es:UDSC_INT13BITS[di],cx ; int 13 API support bitmap
 
+equip_nolba:
 	call	floppy_type		; determine type, build default BPB
 
 	cmp	nfloppy,1		; do we only have single drive?
@@ -2418,6 +2430,9 @@ equip_no_chgline:
 	cmp	cl,36			; 36 spt ?
 	 jne	equip_no_type		; don't recognise anything
 equip_type:
+	cmp	bl,0			; 360K 5.25"?
+	je	equip_type_ok		; yes
+	mov	es:UDSC_NCYL[di],80	; else assume 80 tracks
 	cmp	bl,3			; is it 1.44 Mb 3.5" type?
 	 jb	equip_type_ok		; skip if 360K, 1.2Mb, 720K (0, 1, 2)
 	mov	bl,7			; use reserved "Other" type
@@ -2444,9 +2459,43 @@ equip_360:
 	mov	es,ax			; ES = DS
 	rep	movsb			; make default BPB current BPB in UDSC
 	popx	<cx, si, di, es>
+
+;	test	es:UDSC_INT13BITS[di],7	; extended functions available?
+;	 jz	equip_type_nolba	; no, must be a standard FDD
+	push	cx
+	push	si
+	pushx	<es,di,dx>
+	mov	ah,ROS_LBAPARAM		; get extended drive parameters
+	lea	si,int13ex_para		; DS:SI -> drive parameter buffer
+	int_____DISK_INT
+	popx	<dx,di,es>
+	 jc	equip_type_nolba	; error, assume standard FDD
+	test	word ptr 2[si],4	; removable drive?
+	 jnz	equip_type_nolba	; no
+	or	es:UDSC_FLAGS[di],UDF_HARD ; classify it as hard disk
+	mov	ax,4[si]		; number of cylinders
+	mov	es:UDSC_NCYL[di],ax
+	mov	ax,8[si]		; number of heads
+	mov	nhead,al
+	mov	ax,0ch[si]		; number of sectors per track
+	mov	nsect,al
+	mov	ax,10h[si]		; total number of sectors
+	mov	es:word ptr (UDSC_BPB+BPB_SIZE)[di],ax
+	mov	ax,12h[si]
+	mov	es:word ptr (UDSC_BPB+BPB_SIZE+2)[di],ax
+	lea	bx,es:UDSC_BPB[di]
+	pushx	<es,di,si,dx>
+	call	hd_bpb			; build BPB from scratch
+	popx	<dx,si,di,es>
+	pop	si
+	lea	si,es:UDSC_BPB[di]
+	push	si
+equip_type_nolba:
+	pop	si
+	pop	cx
 	pushx	<es, di>
 	lea	di,es:UDSC_DEVBPB[di]
-	rep	movsb			; copy default BPB device BPB in UDSC
+	rep	movsb			; copy BPB to device BPB in UDSC
 	popx	<di, es>
 	ret
 
@@ -2860,17 +2909,9 @@ log_p0b:
 
 	mov	BPB_TOTSEC[bx],ax	; set partition size for < 32 Mb
 					; we'll zero this later if > 32 Mb
-	push	es
-	push	di
-	push	ax
-	push	dx
-	push	si
+	pushx	<es,di,ax,dx,si>
 	call	hd_bpb			; build BPB from scratch
-	pop	si
-	pop	dx
-	pop	ax
-	pop	di
-	pop	es
+	popx	<si,dx,ax,di,es>
 	
 	cmp	byte ptr -11[si],0E9h	; look for a jmp
 	jz	log_p1a
@@ -3204,6 +3245,9 @@ nfloppy		db	0		; # of floppy drives
 int13ex_ver	dw	0		; version of int 13 extensions
 int13ex_bits	dw	0		; int 13 API support bitmap
 
+int13ex_para	dw	30		; extended drive parameters
+		db	28 dup (?)
+
 ;	Public	diskaddrpack
 ;diskaddrpack:				; disk address packet structure for LBA access
 ;		db	10h		; size of packet
@@ -3219,7 +3263,7 @@ extoffset	dd	0		; block offset of extended partition
 ptstart		dd	0		; block offset of current partition table
 lastpart	dd	0		; last checked partition
 extoffvalid	db	0		; extoffset valid flag
-parttype		db	0		; ID of partition
+parttype	db	0		; ID of partition
 
 	Public	init_runit
 init_runit	db	0		; poked with ROS Unit at boot

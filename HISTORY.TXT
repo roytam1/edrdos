@@ -189,10 +189,25 @@
   number before the file handle
 - inverted error codes in function 73h since this is how error_exit expects
   them
-- added limited support for function 714E/4Fh (LFN FindFirst/Next, but without
+- added limited support for function 714E/4Fh (LFN Find First/Next, but without
   LFN support) which are needed for FAT+ support in DIR
 - added limited support for subfunctions 3 and 4 of function 7143h (LFN Set/Get
   Last Write Time, but without LFN support) which are used by XCOPY
+(23.7.2009):
+- made function 440Dh/CL=60h (IOCTL - Get Device Parameters) report 80 tracks
+  instead of 40 for USB floppy disk drives
+- added experimental Int13h extension (LBA) support for removable drives
+- added experimental support for USB memory sticks
+- fixed bug in function 714E/4Fh (LFN Find First/Next) that caused it to
+  sometimes report the size of FAT+ files as 4 GB-1 instead of the actual file
+  size
+- fixed bug in functions 7142h (Long Lseek) and 71A6h (Get File Info) that
+  caused them to silently fail when called with an invalid file handle
+- changed network redirector to check whether a path that both resembles an UNC
+  (networking) filename AND contains a drive letter is on a local drive before
+  assuming that it is remote
+- removed unnecessary restriction regarding multiple leading path separators in
+  function 3Dh (Open) since it did not apply to other occurrences
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions
