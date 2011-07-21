@@ -792,6 +792,7 @@ BYTE	*path;
 #define DIR_CHANGE	(0x0080)	/* Change the Default Opts */
 #define	DIR_NOPAGE	(0x0100)	/* No Paging of Output	   */
 #define DIR_2COLS	(0x0200)	/* double column listing   */
+#define	DIR_BARE	(0x0400)	/* List Filenames only     */
 #define	OPT(x)		(flags & x)	/* Return Flag Conditions  */
 
 MLOCAL UWORD dir_default = DIR_DIR | DIR_LONG;
@@ -805,12 +806,17 @@ REG UWORD flags;
 	if(OPT(DIR_LONG)) {		/* Force DIR_WIDE to be cleared	*/
 	    flags &= ~DIR_WIDE;		/* if the LONG format has been	*/
 	    flags &= ~DIR_2COLS;	/* selected.			*/
+	    flags &= ~DIR_BARE;
 	}
 
 	if(OPT(DIR_2COLS)) {
 	    flags &= ~DIR_LONG;
 	    flags &= ~DIR_WIDE;
+	    flags &= ~DIR_BARE;
 	}
+
+	if(OPT(DIR_WIDE))
+	  flags&=~DIR_BARE;
 
 	if(page_wid < 76)		/* Check the screen is wide	*/
 	    flags &= ~DIR_WIDE;		/* enough to display directory	*/
@@ -850,7 +856,7 @@ REG BYTE *cmd;
 	BOOLEAN	lfnsearch;
 	UWORD	shandle;
 
-	if(f_check (cmd, "dsawlprcn2", &flags, NO))	/* if any bad flags */
+	if(f_check (cmd, "dsawlprcn2b", &flags, NO))	/* if any bad flags */
 	    return;					/*    don't do it   */
 
 	flags = dir_flags(flags);	/* Manipulate the flags to remove   */
@@ -964,6 +970,7 @@ REG BYTE *cmd;
 	if(nofiles(path, ATTR_ALL, NO, YES)) 	/* if no files/dirs or error*/
 	    return;				/* then we can't do this    */
 
+	if (!OPT(DIR_BARE)) {
 	if (ddrive != -1)
 	{
 	    strcpy (temp, "d:");		/* Display the drive Volume	*/
@@ -972,6 +979,7 @@ REG BYTE *cmd;
 	}
 	else
 	    show_crlf(OPT(DIR_PAGE));
+	}
 
 #if 0
 	/* this has been done earlier */
@@ -987,6 +995,7 @@ REG BYTE *cmd;
 		(memory[1] == ':' ? 3 : 1))	/* Path Character.	    */
 		memory[--i] = '\0';
 
+	if (!OPT(DIR_BARE)) {
 	if(i == 0 || (i == 2 && memory[1] == ':')) {
 	    printf (MSG_DIR, temp, s+3);	/* DIR of current Directory  */
 	}
@@ -1018,6 +1027,7 @@ REG BYTE *cmd;
 	      ms_x_chdir(s);
 	    printf (MSG_DIR, temp, memory);
 	  }
+	}
 	}
 
 	others = 0;			/* assume no SYS/DIR files	*/
@@ -1084,7 +1094,17 @@ REG BYTE *cmd;
 	    else				/* is the ".." or "." entry.*/
 		ext = "";
 
-	    if(OPT(DIR_WIDE)) {
+	    if(OPT(DIR_BARE)) {
+	      if (*finddata.lname)
+		printf ("%s",finddata.lname);
+	      else
+		if (*ext)
+		  printf ("%s.%s",finddata.sname,ext);
+		else
+		  printf ("%s",finddata.sname);
+	      show_crlf(OPT(DIR_PAGE));
+	    }
+	    else if(OPT(DIR_WIDE)) {
 		if ((nfiles % 5) == 0)
 		    show_crlf(OPT(DIR_PAGE));
 
@@ -1157,8 +1177,10 @@ REG BYTE *cmd;
 
 	if (lfnsearch) ms_l_findclose(shandle);
 
+	if (!OPT(DIR_BARE)) {
 	if(others + nfiles == 0) {	/* If no matching files then exit  */
 	    e_check(ED_FILE);		/* after displaying File Not Found */
+	}
 	}
 
 	dpath[0]=ddrive+'A';
@@ -1186,22 +1208,24 @@ REG BYTE *cmd;
 	nfree = (ULONG)ret * (ULONG)free * (ULONG)secsiz;
 	}
 
-	show_crlf(OPT(DIR_PAGE));
-	if (ddrive != -1) {
-/*	    printf ("%9d %s%10ld %s", nfiles, MSG_FILES, nfree, MSG_FREE);*/
-/*	    printf ("%9s %s%15ls %s", thousands(nfiles), MSG_FILES, thousands(nfree), MSG_FREE);*/
-	    printf ("%9s %s", thousands(nfiles), MSG_FILES);
-	    printf ("%15ls ", thousands(nfree));
-	    if (sbase==1) printf("K");
-	    printf("%s",MSG_FREE);
-	}
-	else
-/*	    printf ("%9d %s", nfiles, MSG_FILES);*/
-	    printf ("%9s %s", thousands(nfiles), MSG_FILES);
-	show_crlf(OPT(DIR_PAGE));
+	if (!OPT(DIR_BARE)) {
+	  show_crlf(OPT(DIR_PAGE));
+	  if (ddrive != -1) {
+/*	      printf ("%9d %s%10ld %s", nfiles, MSG_FILES, nfree, MSG_FREE);*/
+/*	      printf ("%9s %s%15ls %s", thousands(nfiles), MSG_FILES, thousands(nfree), MSG_FREE);*/
+	      printf ("%9s %s", thousands(nfiles), MSG_FILES);
+	      printf ("%15ls ", thousands(nfree));
+	      if (sbase==1) printf("K");
+	      printf("%s",MSG_FREE);
+	  }
+	  else
+/*	      printf ("%9d %s", nfiles, MSG_FILES);*/
+	      printf ("%9s %s", thousands(nfiles), MSG_FILES);
+	  show_crlf(OPT(DIR_PAGE));
 
-	if(others)			/* if others do exist, tell them */
-	    printf (MSG_EXIST, system ? MSG_NSYS : MSG_NDIR);
+	  if(others)			/* if others do exist, tell them */
+	      printf (MSG_EXIST, system ? MSG_NSYS : MSG_NDIR);
+	}
 }
 
 GLOBAL VOID CDECL cmd_echo(s, o)

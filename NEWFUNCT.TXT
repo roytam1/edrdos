@@ -36,6 +36,7 @@ In batch files/on the command line:
 
  TIME /T	display current time without prompting for new one
  DATE /T	display current date without prompting for new one
+ DIR /B		lists filenames without any other info
 
 New or changed system calls:
 
@@ -60,7 +61,8 @@ New or changed system calls:
 			stubs have been added for sub functions 4ah, 4bh, 6ah
 			and 6bh	(lock/unlock logical/physical drive) that fake
 			successful operation
-	/AH=1fh/32h	(Get DPB) no longer returns DPBs for FAT32 drives
+	/AH=1fh/32h	(Get DPB) ***no longer returns DPBs for FAT32 drives***
+			reverted to previous behaviour
 	/AH=30h		(Get DOS Version) now reports OEM code eeh (DR DOS)
 			instead of 00h (PC DOS)
 	/AX=3306h	(Get True DOS Version) now returns 7.01 instead of

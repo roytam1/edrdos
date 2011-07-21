@@ -417,11 +417,11 @@ func32:
 	call	set_retry_RF		; Valid to RETRY or FAIL
 	mov	dh,80h			; set top bit - free space not needed
 	call	fdos_DISKINFO		; and make the function call
-;	 jnc	f1B1C1F32_common	; exit using common code
-	 jc	fdos_DI_error		; check if error
-	cmp	dosfat,FAT32		; attempt to use on FAT32 drive?
-	 jne	f1B1C1F32_common	; exit using common code
-	mov	ax,0ffh
+	 jnc	f1B1C1F32_common	; exit using common code
+;	 jc	fdos_DI_error		; check if error
+;	cmp	dosfat,FAT32		; attempt to use on FAT32 drive?
+;	 jne	f1B1C1F32_common	; exit using common code
+;	mov	ax,0ffh
 fdos_DI_error:
 	jmp	fcberror_exit		; exit thru FCB error
 

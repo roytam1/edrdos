@@ -179,20 +179,20 @@ _help_copy	db	"COPY", TAB, "Copies or combines files", LF, LF, "Syntax:", LF, " 
 		db	"es in copy", LF, TAB, TAB, "/C prompt for confirmation by user before copying", LF, TAB, TAB, "/Z zeros top bit of every byte in destination", LF, "Examples:", LF, TAB, "COPY file1+file2 file"
 		db	"3", LF, TAB, "COPY *.txt c:dir1", NUL
 _help_date	db	"DATE", TAB, "Displays and changes the date.", LF, LF, "Syntax:", LF, TAB, "DATE /H", LF, TAB, "DATE [mm-dd-yy] (US format)", LF, TAB, "DATE [dd-mm-yy] (European format)", LF, TAB, "DATE [yy-"
-		db	"mm-dd] (Japanese format)", LF, LF, TAB, "/H", TAB, "gives this screen", LF, TAB, "mm", TAB, "month 1 to 12", LF, TAB, "dd", TAB, "day 1 to 31", LF, TAB, "yy", TAB, "2 or 4 digit year", LF
-		db	TAB, "/T", TAB, "displays current date without prompting for new date", LF
+		db	"mm-dd] (Japanese format)", LF, TAB, "DATE [/T]", LF, LF, TAB, "/H", TAB, "gives this screen", LF, TAB, "mm", TAB, "month 1 to 12", LF, TAB, "dd", TAB, "day 1 to 31", LF, TAB, "yy", TAB, "2 or 4"
+		db	" digit year", LF, TAB, "/T", TAB, "displays current date without prompting for new date", LF
 		db	TAB, "none", TAB, "no parameters displays date then prompts for new date", LF, LF, "Examples:", LF, TAB, "DATE 16-11-90", LF, TAB, "DATE", NUL
 _help_del	db	"DEL", TAB, "Erases files.", LF, LF, "Syntax:", LF, TAB, "DEL /H", LF, TAB, "DEL wildspec [/C|/P][/S]", LF, LF, TAB, "/H", TAB, "  gives this screen", LF, TAB, "/C|/P", TAB, "  prompt befo"
 		db	"re deletion", LF, TAB, "/S", TAB, "  include system files", LF, TAB, "wildspec  file to be deleted (wildcards allowed)", LF, LF, "Examples:", LF, TAB, "DEL *.EXE /CS", LF, TAB, "DEL MYFILE."
 		db	"TXT", NUL
 _help_delq	db	"DELQ", TAB, "Erases files but queries you before doing so.", LF, LF, "Syntax:", LF, TAB, "DELQ /H", LF, TAB, "DELQ wildspec [/S]", LF, LF, TAB, "/H", TAB, "  gives this screen", LF, TAB, "/"
 		db	"S", TAB, "  include system files", LF, TAB, "wildspec  file to be deleted (wildcards allowed)", LF, LF, "Examples:", LF, TAB, "DELQ *.EXE /S", LF, TAB, "DELQ MYFILE.TXT", NUL
-_help_dir	db	"DIR", TAB, "Displays the files in a directory.", LF, LF, "Syntax:", TAB, "DIR /H", LF, TAB, "DIR [wildspec] [/L|/2|/W] [/P|/N] [/A|/D|/S] [/C|/R]", LF, LF, TAB, "/H", TAB, "  gives this scree"
+_help_dir	db	"DIR", TAB, "Displays the files in a directory.", LF, LF, "Syntax:", TAB, "DIR /H", LF, TAB, "DIR [wildspec] [/L|/2|/W|/B] [/P|/N] [/A|/D|/S] [/C|/R]", LF, LF, TAB, "/H", TAB, "  gives this scree"
 		db	"n", LF, TAB, "wildspec  files to be displayed (wildcards allowed)", LF, TAB, "/A", TAB, "  displays all files", LF, TAB, "/C or /R  make other switches default for next time", LF, TAB, "/D", TAB
 		db	"  displays files without system attribute set (default)", LF, TAB, "/L", TAB, "  long format. Include size, date and time (default)", LF, TAB, "/2", TAB, "  as above except files are displayed i"
 		db	"n two columns", LF, TAB, "/N", TAB, "  return to default paging switch", LF, TAB, "/P", TAB, "  pause at end of full page. Default is no paging", LF, TAB, "/S", TAB, "  displays files with sy"
-		db	"stem attribute set", LF, TAB, "/W", TAB, "  wide format. Displays file and directory names only", LF, TAB, "none", TAB, "  no parameters displays all files using current default", LF, TAB, TAB
-		db	"  switches", LF, "Example:", LF, TAB, "DIR /C /W", NUL
+		db	"stem attribute set", LF, TAB, "/W", TAB, "  wide format. Displays file and directory names only", LF, TAB, "/B", TAB, "  displays filenames only", LF, TAB, "none", TAB, "  no parameters dis"
+		db	"plays all files using current default", LF, TAB, TAB, "  switches", LF, "Example:", LF, TAB, "DIR /C /W", NUL
 _help_echo	db	"ECHO", TAB, "Used in batch files, this command is used to display a message", LF, TAB, "to the screen.", LF, LF, "Syntax:", LF, TAB, "ECHO /H", LF, TAB, "ECHO [ON|OFF|string]", LF, LF, TAB, "/"
 		db	"H", TAB, "gives this screen", LF, TAB, "ON", TAB, "turn echoing on (default)", LF, TAB, "OFF", TAB, "turn echoing off", LF, TAB, "string", TAB, "display ""string""", LF, LF, "Examples:", LF
 		db	TAB, "ECHO OFF", LF, TAB, "ECHO You are running the %%OS%% operating system.", NUL
@@ -251,7 +251,7 @@ _help_set	db	"SET", TAB, "Inserts strings into the command processors environmen
 _help_shift	db	"SHIFT", TAB, "Used in batch files, this command allows you to change the", LF, TAB, "position of command line parameters to access more than 10", LF, TAB, "(%%0 through %%9) replacement variables."
 		db	LF, LF, "Syntax:", LF, TAB, "SHIFT [/H]", LF, LF, TAB, "/H", TAB, "gives this screen", LF, LF, "Example:", LF, TAB, ":loop", LF, TAB, "if ""%%1"" == """" goto done", LF, TAB, "copy %%1 "
 		db	"c:\archive", LF, TAB, "shift", LF, TAB, "goto loop", LF, TAB, ":done", NUL
-_help_time	db	"TIME", TAB, "Displays and changes the time of day.", LF, LF, "Syntax:", LF, TAB, "TIME /H", LF, TAB, "TIME [hh[:mm[:ss]][a|p] [/C]", LF, LF, TAB, "/H", TAB, "gives this screen", LF, TAB, "h"
+_help_time	db	"TIME", TAB, "Displays and changes the time of day.", LF, LF, "Syntax:", LF, TAB, "TIME /H", LF, TAB, "TIME [hh[:mm[:ss]][a|p] [/C] [/T]", LF, LF, TAB, "/H", TAB, "gives this screen", LF, TAB, "h"
 		db	"h", TAB, "hours 0 to 23 (24 hour clock) or 1 to 12 if a or p specified", LF, TAB, "mm", TAB, "minutes 0 to 59", LF, TAB, "ss", TAB, "seconds 0 to 59", LF, TAB, "a|p", TAB, "am|pm", LF, TAB
 		db	"/C", TAB, "displays time continuously", LF
 		db	TAB, "/T", TAB, "displays current time without prompting for new time", LF

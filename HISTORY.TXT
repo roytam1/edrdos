@@ -208,6 +208,11 @@
   assuming that it is remote
 - removed unnecessary restriction regarding multiple leading path separators in
   function 3Dh (Open) since it did not apply to other occurrences
+(21.07.2011):
+- reverted functions 1F/32h (Get DPB) to the behaviour before the 7.01.07
+  (24.3.2004) WIP version so they do no longer report FAT32 drives as invalid
+- added option /B "bare" to DIR command
+- included option /T in help text for TIME and DATE commands
 
 7.01.07:
 - added FAT32 support to the BDOS loader to allow booting from FAT32 partitions
